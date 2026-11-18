@@ -1,0 +1,17 @@
+{
+  "@@locale": "ro",
+  "appTitle": "GeoCapture",
+  "signInTitle": "Bine ai revenit",
+  "signInDescription": "Autentifică-te pentru a realiza și gestiona fotografiile din teren.",
+  "username": "Nume de utilizator",
+  "password": "Parolă",
+  "signIn": "Autentificare",
+  "signingIn": "Se autentifică...",
+  "usernameRequired": "Introdu numele de utilizator.",
+  "passwordRequired": "Introdu parola.",
+  "showPassword": "Afișează parola",
+  "hidePassword": "Ascunde parola",
+  "adminAccountHint": "Folosește contul oferit de administrator.",
+  "signInUnavailable": "Autentificarea nu este disponibilă momentan. Încearcă din nou mai târziu.",
+  "language": "Limbă"
+}

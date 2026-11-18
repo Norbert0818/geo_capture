@@ -1,0 +1,17 @@
+{
+  "@@locale": "en",
+  "appTitle": "GeoCapture",
+  "signInTitle": "Welcome back",
+  "signInDescription": "Sign in to capture and manage your field photos.",
+  "username": "Username",
+  "password": "Password",
+  "signIn": "Sign in",
+  "signingIn": "Signing in...",
+  "usernameRequired": "Enter your username.",
+  "passwordRequired": "Enter your password.",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "adminAccountHint": "Use the account provided by your administrator.",
+  "signInUnavailable": "Sign-in is currently unavailable. Please try again later.",
+  "language": "Language"
+}
