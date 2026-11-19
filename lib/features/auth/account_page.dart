@@ -5,6 +5,8 @@ import '../../core/models/session_user.dart';
 import '../../core/widgets/auth_shell.dart';
 import '../../l10n/app_localizations.dart';
 import 'auth_error_message.dart';
+import '../capture/capture_page.dart';
+import '../capture/photo_draft_store.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({
@@ -25,6 +27,22 @@ class AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<AccountPage> {
+  final _drafts = PhotoDraftStore();
+
+  @override
+  void dispose() {
+    _drafts.dispose();
+    super.dispose();
+  }
+
+  void _openPhotos() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => CapturePage(drafts: _drafts),
+      ),
+    );
+  }
+
   bool _busy = false;
   String? _errorCode;
 
@@ -92,7 +110,17 @@ class _AccountPageState extends State<AccountPage> {
             ),
           ],
           const SizedBox(height: 24),
-          FilledButton(
+          AnimatedBuilder(
+            animation: _drafts,
+            builder: (context, _) => FilledButton.icon(
+              key: const ValueKey('openPhotosButton'),
+              onPressed: _busy ? null : _openPhotos,
+              icon: const Icon(Icons.photo_camera_outlined),
+              label: Text('${t.capturePhotos} (${_drafts.items.length})'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
             key: const ValueKey('signOutButton'),
             onPressed: _busy ? null : _signOut,
             child: Text(_busy ? t.signingOut : t.signOut),

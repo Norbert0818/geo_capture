@@ -62,8 +62,7 @@ import 'app_localizations_ro.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -71,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,18 +82,17 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('ro'),
+    Locale('ro')
   ];
 
   /// No description provided for @appTitle.
@@ -349,10 +346,123 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'User'**
   String get userRole;
+
+  /// No description provided for @capturePhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get capturePhotos;
+
+  /// No description provided for @captureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture photos'**
+  String get captureTitle;
+
+  /// No description provided for @takePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take photo'**
+  String get takePhoto;
+
+  /// No description provided for @takingPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting location and taking photo...'**
+  String get takingPhoto;
+
+  /// No description provided for @cameraStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting camera...'**
+  String get cameraStarting;
+
+  /// No description provided for @cameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No camera is available. Check that another app is not using it.'**
+  String get cameraUnavailable;
+
+  /// No description provided for @cameraPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow camera access in your device or browser settings.'**
+  String get cameraPermissionDenied;
+
+  /// No description provided for @locationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow location access to attach coordinates to your photos.'**
+  String get locationPermissionDenied;
+
+  /// No description provided for @locationServicesDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on location services and try again.'**
+  String get locationServicesDisabled;
+
+  /// No description provided for @locationTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Location could not be determined in time. Try again.'**
+  String get locationTimeout;
+
+  /// No description provided for @locationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'A recent location is unavailable. Check location access and try again.'**
+  String get locationUnavailable;
+
+  /// No description provided for @captureFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The photo could not be taken. Please try again.'**
+  String get captureFailed;
+
+  /// No description provided for @pendingPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending photos'**
+  String get pendingPhotos;
+
+  /// No description provided for @noPhotosYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No photos yet.'**
+  String get noPhotosYet;
+
+  /// No description provided for @removePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove photo'**
+  String get removePhoto;
+
+  /// No description provided for @capturedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Captured at'**
+  String get capturedAt;
+
+  /// No description provided for @locationMeasuredAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Location measured at'**
+  String get locationMeasuredAt;
+
+  /// No description provided for @locationAccuracy.
+  ///
+  /// In en, this message translates to:
+  /// **'Location accuracy'**
+  String get locationAccuracy;
+
+  /// No description provided for @draftNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Unuploaded photos are cleared when you close or reload the app.'**
+  String get draftNotice;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -361,26 +471,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'ro'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'ro'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'ro':
-      return AppLocalizationsRo();
+    case 'en': return AppLocalizationsEn();
+    case 'ro': return AppLocalizationsRo();
   }
 
   throw FlutterError(
     'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
     'an issue with the localizations generation tool. Please file an issue '
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
+    'that was used.'
   );
 }

@@ -15,8 +15,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get signInTitle => 'Bine ai revenit';
 
   @override
-  String get signInDescription =>
-      'Autentifică-te pentru a realiza și gestiona fotografiile din teren.';
+  String get signInDescription => 'Autentifică-te pentru a realiza și gestiona fotografiile din teren.';
 
   @override
   String get username => 'Nume de utilizator';
@@ -46,8 +45,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get adminAccountHint => 'Folosește contul oferit de administrator.';
 
   @override
-  String get signInUnavailable =>
-      'Autentificarea nu este disponibilă momentan. Încearcă din nou mai târziu.';
+  String get signInUnavailable => 'Autentificarea nu este disponibilă momentan. Încearcă din nou mai târziu.';
 
   @override
   String get language => 'Limbă';
@@ -56,12 +54,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get invalidCredentials => 'Nume de utilizator sau parolă incorectă.';
 
   @override
-  String get serviceUnavailable =>
-      'Serviciul nu este disponibil. Încearcă din nou.';
+  String get serviceUnavailable => 'Serviciul nu este disponibil. Încearcă din nou.';
 
   @override
-  String get tooManyAttempts =>
-      'Prea multe încercări. Așteaptă și încearcă din nou.';
+  String get tooManyAttempts => 'Prea multe încercări. Așteaptă și încearcă din nou.';
 
   @override
   String get sessionExpired => 'Sesiunea a expirat. Autentifică-te din nou.';
@@ -79,8 +75,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get changePasswordTitle => 'Setează propria parolă';
 
   @override
-  String get changePasswordDescription =>
-      'Schimbă parola temporară înainte de a continua.';
+  String get changePasswordDescription => 'Schimbă parola temporară înainte de a continua.';
 
   @override
   String get currentPassword => 'Parola actuală';
@@ -101,8 +96,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get passwordsDoNotMatch => 'Parolele nu coincid.';
 
   @override
-  String get passwordRules =>
-      'Folosește minimum 12 caractere, litere mari și mici, o cifră și 4 caractere diferite.';
+  String get passwordRules => 'Folosește minimum 12 caractere, litere mari și mici, o cifră și 4 caractere diferite.';
 
   @override
   String get passwordUnchanged => 'Alege o parolă diferită de parola actuală.';
@@ -139,4 +133,61 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get userRole => 'Utilizator';
+
+  @override
+  String get capturePhotos => 'Fotografii';
+
+  @override
+  String get captureTitle => 'Realizează fotografii';
+
+  @override
+  String get takePhoto => 'Fă o fotografie';
+
+  @override
+  String get takingPhoto => 'Se obține locația și se realizează fotografia...';
+
+  @override
+  String get cameraStarting => 'Se pornește camera...';
+
+  @override
+  String get cameraUnavailable => 'Camera nu este disponibilă. Verifică dacă este folosită de altă aplicație.';
+
+  @override
+  String get cameraPermissionDenied => 'Permite accesul la cameră în setările dispozitivului sau ale browserului.';
+
+  @override
+  String get locationPermissionDenied => 'Permite accesul la locație pentru a atașa coordonate fotografiilor.';
+
+  @override
+  String get locationServicesDisabled => 'Activează serviciile de localizare și încearcă din nou.';
+
+  @override
+  String get locationTimeout => 'Locația nu a putut fi determinată la timp. Încearcă din nou.';
+
+  @override
+  String get locationUnavailable => 'O locație recentă nu este disponibilă. Verifică accesul la locație și încearcă din nou.';
+
+  @override
+  String get captureFailed => 'Fotografia nu a putut fi realizată. Încearcă din nou.';
+
+  @override
+  String get pendingPhotos => 'Fotografii în așteptare';
+
+  @override
+  String get noPhotosYet => 'Nu există fotografii încă.';
+
+  @override
+  String get removePhoto => 'Elimină fotografia';
+
+  @override
+  String get capturedAt => 'Realizată la';
+
+  @override
+  String get locationMeasuredAt => 'Locație măsurată la';
+
+  @override
+  String get locationAccuracy => 'Precizia locației';
+
+  @override
+  String get draftNotice => 'Fotografiile neîncărcate se șterg când închizi sau reîncarci aplicația.';
 }

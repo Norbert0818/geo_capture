@@ -12,7 +12,10 @@ import 'features/auth/login_page.dart';
 import 'l10n/app_localizations.dart';
 
 class GeoCaptureApp extends StatefulWidget {
-  const GeoCaptureApp({super.key, required this.authRepository});
+  const GeoCaptureApp({
+    super.key,
+    required this.authRepository,
+  });
 
   final AuthRepository authRepository;
 
@@ -76,13 +79,9 @@ class _GeoCaptureAppState extends State<GeoCaptureApp> {
     });
   }
 
-  Future<void> _changePassword(
-    String currentPassword,
-    String newPassword,
-  ) async {
+  Future<void> _changePassword(String newPassword) async {
     try {
       final user = await widget.authRepository.changePassword(
-        currentPassword,
         newPassword,
       );
 

@@ -16,10 +16,8 @@ class ChangePasswordPage extends StatefulWidget {
 
   final Locale locale;
   final ValueChanged<Locale> onLocaleChanged;
-
-  final Future<void> Function(String currentPassword, String newPassword)
+  final Future<void> Function(String newPassword)
   onChangePassword;
-
   final Future<void> Function() onSignOut;
 
   @override
@@ -28,7 +26,6 @@ class ChangePasswordPage extends StatefulWidget {
 
 class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _formKey = GlobalKey<FormState>();
-  final _current = TextEditingController();
   final _newPassword = TextEditingController();
   final _confirmation = TextEditingController();
   final _visibleFields = <String>{};
@@ -39,20 +36,18 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   @override
   void dispose() {
-    _current.dispose();
     _newPassword.dispose();
     _confirmation.dispose();
     super.dispose();
   }
 
   Future<void> _run(
-    Future<void> Function() action, {
-    bool signingOut = false,
-  }) async {
+      Future<void> Function() action, {
+        bool signingOut = false,
+      }) async {
     if (_busy) return;
 
     FocusScope.of(context).unfocus();
-
     setState(() {
       _busy = true;
       _signingOut = signingOut;
@@ -78,12 +73,13 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   Future<void> _submit() async {
     if (_busy || !_formKey.currentState!.validate()) return;
 
-    await _run(() => widget.onChangePassword(_current.text, _newPassword.text));
+    await _run(
+          () => widget.onChangePassword(_newPassword.text),
+    );
   }
 
   String? _validateNewPassword(String? value, AppLocalizations t) {
     if (value == null || value.isEmpty) return t.newPasswordRequired;
-    if (value == _current.text) return t.passwordUnchanged;
     if (value.length > 1024) return t.invalidInput;
 
     if (value.length < 12 ||
@@ -130,12 +126,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           onPressed: _busy
               ? null
               : () => setState(() {
-                  if (visible) {
-                    _visibleFields.remove(name);
-                  } else {
-                    _visibleFields.add(name);
-                  }
-                }),
+            if (visible) {
+              _visibleFields.remove(name);
+            } else {
+              _visibleFields.add(name);
+            }
+          }),
           icon: Icon(
             visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
           ),
@@ -176,14 +172,6 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               Text(t.changePasswordDescription, textAlign: TextAlign.center),
               const SizedBox(height: 24),
               _passwordField(
-                name: 'currentPasswordField',
-                label: t.currentPassword,
-                controller: _current,
-                validator: (value) =>
-                    value == null || value.isEmpty ? t.passwordRequired : null,
-              ),
-              const SizedBox(height: 16),
-              _passwordField(
                 name: 'newPasswordField',
                 label: t.newPassword,
                 controller: _newPassword,
@@ -221,9 +209,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               FilledButton(
                 key: const ValueKey('savePasswordButton'),
                 onPressed: _busy ? null : _submit,
-                child: Text(
-                  _busy && !_signingOut ? t.savingPassword : t.savePassword,
-                ),
+                child: Text(_busy && !_signingOut ? t.savingPassword : t.savePassword),
               ),
               const SizedBox(height: 8),
               TextButton(

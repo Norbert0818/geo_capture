@@ -6,10 +6,7 @@ abstract interface class AuthRepository {
 
   Future<SessionUser> signIn(String username, String password);
 
-  Future<SessionUser> changePassword(
-    String currentPassword,
-    String newPassword,
-  );
+  Future<SessionUser> changePassword(String newPassword);
 
   Future<void> signOut();
 
@@ -29,32 +26,23 @@ class HttpAuthRepository implements AuthRepository {
       if (error.code == 'session_expired') {
         return null;
       }
-
       rethrow;
     }
   }
 
   @override
   Future<SessionUser> signIn(String username, String password) async {
-    return _readUser(
-      await _api.post('/api/auth/login', {
-        'username': username.trim(),
-        'password': password,
-      }),
-    );
+    return _readUser(await _api.post('/api/auth/login', {
+      'username': username.trim(),
+      'password': password,
+    }));
   }
 
   @override
-  Future<SessionUser> changePassword(
-    String currentPassword,
-    String newPassword,
-  ) async {
-    return _readUser(
-      await _api.post('/api/auth/password', {
-        'currentPassword': currentPassword,
-        'newPassword': newPassword,
-      }),
-    );
+  Future<SessionUser> changePassword(String newPassword) async {
+    return _readUser(await _api.post('/api/auth/initial-password', {
+      'newPassword': newPassword,
+    }));
   }
 
   @override
