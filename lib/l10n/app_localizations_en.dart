@@ -52,4 +52,94 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get language => 'Language';
+
+  @override
+  String get invalidCredentials => 'Incorrect username or password.';
+
+  @override
+  String get serviceUnavailable =>
+      'The service is unavailable. Please try again.';
+
+  @override
+  String get tooManyAttempts => 'Too many attempts. Please wait and try again.';
+
+  @override
+  String get sessionExpired =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get accessDenied =>
+      'You do not have permission to perform this action.';
+
+  @override
+  String get requestExpired => 'The request has expired. Please try again.';
+
+  @override
+  String get invalidInput => 'Please check the entered information.';
+
+  @override
+  String get changePasswordTitle => 'Set your own password';
+
+  @override
+  String get changePasswordDescription =>
+      'Change your temporary password before continuing.';
+
+  @override
+  String get currentPassword => 'Current password';
+
+  @override
+  String get newPassword => 'New password';
+
+  @override
+  String get confirmPassword => 'Confirm new password';
+
+  @override
+  String get newPasswordRequired => 'Enter a new password.';
+
+  @override
+  String get confirmPasswordRequired => 'Confirm your new password.';
+
+  @override
+  String get passwordsDoNotMatch => 'The passwords do not match.';
+
+  @override
+  String get passwordRules =>
+      'Use at least 12 characters, uppercase and lowercase letters, a number, and 4 different characters.';
+
+  @override
+  String get passwordUnchanged =>
+      'Choose a password different from your current password.';
+
+  @override
+  String get wrongCurrentPassword => 'The current password is incorrect.';
+
+  @override
+  String get savePassword => 'Save password';
+
+  @override
+  String get savingPassword => 'Saving password...';
+
+  @override
+  String get signOut => 'Sign out';
+
+  @override
+  String get signingOut => 'Signing out...';
+
+  @override
+  String get checkingSession => 'Checking your session...';
+
+  @override
+  String get retry => 'Try again';
+
+  @override
+  String get accountTitle => 'Your account';
+
+  @override
+  String get accountReady => 'You are signed in.';
+
+  @override
+  String get administrator => 'Administrator';
+
+  @override
+  String get userRole => 'User';
 }
