@@ -13,16 +13,14 @@ class PhotoCaptureService {
     DateTime Function()? clock,
     String Function()? newId,
   }) : _readLocation = readLocation ?? _deviceLocation,
-        _clock = clock ?? DateTime.now,
-        _newId = newId ?? const Uuid().v4;
+       _clock = clock ?? DateTime.now,
+       _newId = newId ?? const Uuid().v4;
 
   final Future<PhotoLocation> Function() _readLocation;
   final DateTime Function() _clock;
   final String Function() _newId;
 
-  Future<PhotoDraft> capture(
-      Future<Uint8List> Function() takePicture,
-      ) async {
+  Future<PhotoDraft> capture(Future<Uint8List> Function() takePicture) async {
     final location = await _readLocation();
     final capturedAt = _clock().toUtc();
 

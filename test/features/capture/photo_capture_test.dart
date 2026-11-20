@@ -66,10 +66,7 @@ void main() {
     expect(first.location.latitude, 47.181912);
     expect(second.location.latitude, 47.181999);
     expect(first.location.measuredAtUtc, now);
-    expect(
-      second.location.measuredAtUtc,
-      now.add(const Duration(seconds: 1)),
-    );
+    expect(second.location.measuredAtUtc, now.add(const Duration(seconds: 1)));
     expect(first.capturedAtUtc.isUtc, isTrue);
     expect(second.capturedAtUtc, now.add(const Duration(seconds: 2)));
     expect(first.location.overlayText, '47.181912, 23.165123');
@@ -89,7 +86,7 @@ void main() {
       }),
       throwsA(
         isA<CaptureException>().having(
-              (error) => error.code,
+          (error) => error.code,
           'code',
           'location_denied',
         ),
@@ -115,7 +112,7 @@ void main() {
       }),
       throwsA(
         isA<CaptureException>().having(
-              (error) => error.code,
+          (error) => error.code,
           'code',
           'location_unavailable',
         ),
@@ -127,7 +124,15 @@ void main() {
 
   test('a PNG capture keeps its format and original bytes', () async {
     final bytes = Uint8List.fromList([
-      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01,
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a,
+      0x01,
     ]);
     final capture = PhotoCaptureService(
       readLocation: () async => location(),
@@ -152,7 +157,7 @@ void main() {
       capture.capture(() async => Uint8List.fromList([1, 2, 3])),
       throwsA(
         isA<CaptureException>().having(
-              (error) => error.code,
+          (error) => error.code,
           'code',
           'invalid_photo',
         ),
@@ -174,26 +179,25 @@ void main() {
     expect(photo.originalBytes.first, 0xff);
     expect(photo.mimeType, 'image/jpeg');
     expect(photo.filename, 'photo-1.jpg');
-    expect(
-          () => photo.originalBytes[0] = 0,
-      throwsUnsupportedError,
-    );
+    expect(() => photo.originalBytes[0] = 0, throwsUnsupportedError);
   });
 
-  test('removing one photo preserves the other photo and its location',
-          () async {
-        final store = PhotoDraftStore();
-        addTearDown(store.dispose);
+  test(
+    'removing one photo preserves the other photo and its location',
+    () async {
+      final store = PhotoDraftStore();
+      addTearDown(store.dispose);
 
-        await store.capture(() async => draft('first'));
-        await store.capture(() async => draft('second', latitude: 48.123456));
+      await store.capture(() async => draft('first'));
+      await store.capture(() async => draft('second', latitude: 48.123456));
 
-        store.remove('first');
+      store.remove('first');
 
-        expect(store.items.length, 1);
-        expect(store.items.single.id, 'second');
-        expect(store.items.single.location.latitude, 48.123456);
-      });
+      expect(store.items.length, 1);
+      expect(store.items.single.id, 'second');
+      expect(store.items.single.location.latitude, 48.123456);
+    },
+  );
 
   test('a pending capture prevents a duplicate request', () async {
     final pending = Completer<PhotoDraft>();
@@ -225,7 +229,7 @@ void main() {
 
     await store.capture(() async => draft('first'));
     await store.capture(
-          () async => throw const CaptureException('location_timeout'),
+      () async => throw const CaptureException('location_timeout'),
     );
 
     expect(store.items.single.id, 'first');

@@ -7,6 +7,7 @@ import 'photo_capture_service.dart';
 import 'photo_draft.dart';
 import 'photo_draft_card.dart';
 import 'photo_draft_store.dart';
+import 'photo_preparation_service.dart';
 
 class CapturePage extends StatefulWidget {
   const CapturePage({super.key, required this.drafts});
@@ -17,9 +18,8 @@ class CapturePage extends StatefulWidget {
   State<CapturePage> createState() => _CapturePageState();
 }
 
-class _CapturePageState extends State<CapturePage>
-    with WidgetsBindingObserver {
-  final _capture = PhotoCaptureService();
+class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
+  final _capture = PhotoPreparationService();
 
   CameraController? _camera;
   Future<void> _cameraWork = Future<void>.value();
@@ -81,7 +81,7 @@ class _CapturePageState extends State<CapturePage>
       }
 
       final description = cameras.firstWhere(
-            (camera) => camera.lensDirection == CameraLensDirection.back,
+        (camera) => camera.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
       );
 
@@ -99,8 +99,9 @@ class _CapturePageState extends State<CapturePage>
     } on CaptureException catch (failure) {
       error = failure.code;
     } on CameraException catch (failure) {
-      error = failure.code.startsWith('CameraAccess') ||
-          failure.code == 'permissionDenied'
+      error =
+          failure.code.startsWith('CameraAccess') ||
+              failure.code == 'permissionDenied'
           ? 'camera_denied'
           : 'camera_unavailable';
     } catch (_) {
@@ -122,8 +123,8 @@ class _CapturePageState extends State<CapturePage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if ((state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden) &&
+            state == AppLifecycleState.paused ||
+            state == AppLifecycleState.hidden) &&
         !_suspended &&
         _camera?.value.isInitialized == true) {
       _suspended = true;
@@ -143,7 +144,7 @@ class _CapturePageState extends State<CapturePage>
     if (_loading || camera == null || !camera.value.isInitialized) return;
 
     await widget.drafts.capture(
-          () => _capture.capture(() async {
+      () => _capture.capture(() async {
         if (!mounted ||
             generation != _generation ||
             !identical(camera, _camera)) {
@@ -190,32 +191,29 @@ class _CapturePageState extends State<CapturePage>
                           ? Center(child: Text(t.cameraStarting))
                           : _cameraError != null
                           ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            captureErrorMessage(t, _cameraError!),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          OutlinedButton(
-                            onPressed: _startCamera,
-                            child: Text(t.retry),
-                          ),
-                        ],
-                      )
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  captureErrorMessage(t, _cameraError!),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                OutlinedButton(
+                                  onPressed: _startCamera,
+                                  child: Text(t.retry),
+                                ),
+                              ],
+                            )
                           : ColoredBox(
-                        color: Colors.black,
-                        child: Center(
-                          child: CameraPreview(_camera!),
-                        ),
-                      ),
+                              color: Colors.black,
+                              child: Center(child: CameraPreview(_camera!)),
+                            ),
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
                       key: const ValueKey('takePhotoButton'),
-                      onPressed: _loading ||
-                          _camera == null ||
-                          drafts.isCapturing
+                      onPressed:
+                          _loading || _camera == null || drafts.isCapturing
                           ? null
                           : _takePhoto,
                       icon: const Icon(Icons.camera_alt_outlined),
