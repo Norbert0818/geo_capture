@@ -7,6 +7,8 @@ import '../../l10n/app_localizations.dart';
 import 'auth_error_message.dart';
 import '../capture/capture_page.dart';
 import '../capture/photo_draft_store.dart';
+import '../uploads/upload_controller.dart';
+import '../uploads/upload_repository.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({
@@ -15,12 +17,14 @@ class AccountPage extends StatefulWidget {
     required this.locale,
     required this.onLocaleChanged,
     required this.onSignOut,
+    this.uploadRepository,
   });
 
   final SessionUser user;
   final Locale locale;
   final ValueChanged<Locale> onLocaleChanged;
   final Future<void> Function() onSignOut;
+  final UploadRepository? uploadRepository;
 
   @override
   State<AccountPage> createState() => _AccountPageState();
@@ -28,9 +32,20 @@ class AccountPage extends StatefulWidget {
 
 class _AccountPageState extends State<AccountPage> {
   final _drafts = PhotoDraftStore();
+  UploadController? _uploads;
+
+  @override
+  void initState() {
+    super.initState();
+    final repository = widget.uploadRepository;
+    if (repository != null) {
+      _uploads = UploadController(drafts: _drafts, repository: repository);
+    }
+  }
 
   @override
   void dispose() {
+    _uploads?.dispose();
     _drafts.dispose();
     super.dispose();
   }
@@ -38,7 +53,7 @@ class _AccountPageState extends State<AccountPage> {
   void _openPhotos() {
     Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => CapturePage(drafts: _drafts),
+        builder: (_) => CapturePage(drafts: _drafts, uploads: _uploads),
       ),
     );
   }

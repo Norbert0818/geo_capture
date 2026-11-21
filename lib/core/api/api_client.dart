@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 
 import 'api_transport.dart'
-    if (dart.library.io) 'api_transport_io.dart'
-    if (dart.library.js_interop) 'api_transport_web.dart'
-    as transport;
+if (dart.library.io) 'api_transport_io.dart'
+if (dart.library.js_interop) 'api_transport_web.dart'
+as transport;
 
 class ApiException implements Exception {
   const ApiException(this.code, {this.statusCode});
@@ -17,15 +17,15 @@ class ApiException implements Exception {
 
 class ApiClient {
   ApiClient(String baseUrl)
-    : _dio = transport.createDio(
-        BaseOptions(
-          baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 20),
-          contentType: Headers.jsonContentType,
-          headers: const {'Accept': 'application/json'},
-        ),
-      );
+      : _dio = transport.createDio(
+    BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 20),
+      contentType: Headers.jsonContentType,
+      headers: const {'Accept': 'application/json'},
+    ),
+  );
 
   ApiClient.fromDio(this._dio);
 
@@ -41,9 +41,9 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> post(
-    String path,
-    Map<String, dynamic> body,
-  ) async {
+      String path,
+      Map<String, dynamic> body,
+      ) async {
     final csrf = await get('/api/auth/csrf');
     final token = csrf['token'];
 
@@ -58,6 +58,35 @@ class ApiClient {
         options: Options(headers: {'X-CSRF-Token': token}),
       );
 
+      return _readObject(response);
+    } on DioException catch (error) {
+      throw _mapError(error, path);
+    }
+  }
+
+  Future<Map<String, dynamic>> postMultipart(
+      String path,
+      FormData body, {
+        ProgressCallback? onSendProgress,
+      }) async {
+    final csrf = await get('/api/auth/csrf');
+    final token = csrf['token'];
+    if (token is! String || token.isEmpty) {
+      throw const ApiException('service_unavailable');
+    }
+
+    try {
+      final response = await _dio.post<dynamic>(
+        path,
+        data: body,
+        options: Options(
+          contentType: Headers.multipartFormDataContentType,
+          headers: {'X-CSRF-Token': token},
+          sendTimeout: const Duration(minutes: 2),
+          receiveTimeout: const Duration(seconds: 90),
+        ),
+        onSendProgress: onSendProgress,
+      );
       return _readObject(response);
     } on DioException catch (error) {
       throw _mapError(error, path);
@@ -95,6 +124,32 @@ class ApiClient {
 
     if (status == 403) {
       return ApiException('forbidden', statusCode: status);
+    }
+
+    if (status == 413) {
+      return ApiException('upload_too_large', statusCode: status);
+    }
+
+    const uploadErrors = {
+      'invalid_upload_form',
+      'invalid_manifest',
+      'invalid_serial_number',
+      'duplicate_photo_id',
+      'duplicate_photo_file',
+      'invalid_photo',
+      'invalid_photo_dimensions',
+      'invalid_location',
+      'invalid_photo_time',
+      'photo_pair_required',
+      'stamped_jpeg_required',
+      'upload_too_large',
+      'multipart_required',
+      'upload_id_conflict',
+    };
+    if ({400, 409, 415}.contains(status) &&
+        data is Map &&
+        uploadErrors.contains(data['code'])) {
+      return ApiException(data['code'] as String, statusCode: status);
     }
 
     if (status == 400 && data is Map) {

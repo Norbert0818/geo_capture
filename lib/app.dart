@@ -9,15 +9,18 @@ import 'features/auth/auth_error_message.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/change_password_page.dart';
 import 'features/auth/login_page.dart';
+import 'features/uploads/upload_repository.dart';
 import 'l10n/app_localizations.dart';
 
 class GeoCaptureApp extends StatefulWidget {
   const GeoCaptureApp({
     super.key,
     required this.authRepository,
+    this.uploadRepository,
   });
 
   final AuthRepository authRepository;
+  final UploadRepository? uploadRepository;
 
   @override
   State<GeoCaptureApp> createState() => _GeoCaptureAppState();
@@ -81,9 +84,7 @@ class _GeoCaptureAppState extends State<GeoCaptureApp> {
 
   Future<void> _changePassword(String newPassword) async {
     try {
-      final user = await widget.authRepository.changePassword(
-        newPassword,
-      );
+      final user = await widget.authRepository.changePassword(newPassword);
 
       if (mounted) setState(() => _user = user);
     } on ApiException catch (error) {
@@ -184,6 +185,7 @@ class _GeoCaptureAppState extends State<GeoCaptureApp> {
       locale: _locale,
       onLocaleChanged: _changeLocale,
       onSignOut: _signOut,
+      uploadRepository: widget.uploadRepository,
     );
   }
 

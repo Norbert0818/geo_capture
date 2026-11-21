@@ -2,6 +2,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../uploads/upload_controller.dart';
+import '../uploads/upload_panel.dart';
 import 'capture_error_message.dart';
 import 'photo_capture_service.dart';
 import 'photo_draft.dart';
@@ -10,9 +12,10 @@ import 'photo_draft_store.dart';
 import 'photo_preparation_service.dart';
 
 class CapturePage extends StatefulWidget {
-  const CapturePage({super.key, required this.drafts});
+  const CapturePage({super.key, required this.drafts, this.uploads});
 
   final PhotoDraftStore drafts;
+  final UploadController? uploads;
 
   @override
   State<CapturePage> createState() => _CapturePageState();
@@ -81,7 +84,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       }
 
       final description = cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.back,
+            (camera) => camera.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
       );
 
@@ -100,8 +103,8 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       error = failure.code;
     } on CameraException catch (failure) {
       error =
-          failure.code.startsWith('CameraAccess') ||
-              failure.code == 'permissionDenied'
+      failure.code.startsWith('CameraAccess') ||
+          failure.code == 'permissionDenied'
           ? 'camera_denied'
           : 'camera_unavailable';
     } catch (_) {
@@ -123,8 +126,8 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if ((state == AppLifecycleState.inactive ||
-            state == AppLifecycleState.paused ||
-            state == AppLifecycleState.hidden) &&
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) &&
         !_suspended &&
         _camera?.value.isInitialized == true) {
       _suspended = true;
@@ -144,7 +147,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     if (_loading || camera == null || !camera.value.isInitialized) return;
 
     await widget.drafts.capture(
-      () => _capture.capture(() async {
+          () => _capture.capture(() async {
         if (!mounted ||
             generation != _generation ||
             !identical(camera, _camera)) {
@@ -170,12 +173,15 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     final t = AppLocalizations.of(context)!;
 
     return AnimatedBuilder(
-      animation: widget.drafts,
+      animation: Listenable.merge([
+        widget.drafts,
+        if (widget.uploads != null) widget.uploads!,
+      ]),
       builder: (context, _) {
         final drafts = widget.drafts;
 
         return PopScope(
-          canPop: !drafts.isCapturing,
+          canPop: !drafts.isCapturing && widget.uploads?.isUploading != true,
           child: Scaffold(
             appBar: AppBar(title: Text(t.captureTitle)),
             body: Align(
@@ -191,29 +197,33 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                           ? Center(child: Text(t.cameraStarting))
                           : _cameraError != null
                           ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  captureErrorMessage(t, _cameraError!),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 16),
-                                OutlinedButton(
-                                  onPressed: _startCamera,
-                                  child: Text(t.retry),
-                                ),
-                              ],
-                            )
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            captureErrorMessage(t, _cameraError!),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton(
+                            onPressed: _startCamera,
+                            child: Text(t.retry),
+                          ),
+                        ],
+                      )
                           : ColoredBox(
-                              color: Colors.black,
-                              child: Center(child: CameraPreview(_camera!)),
-                            ),
+                        color: Colors.black,
+                        child: Center(child: CameraPreview(_camera!)),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
                       key: const ValueKey('takePhotoButton'),
                       onPressed:
-                          _loading || _camera == null || drafts.isCapturing
+                      _loading ||
+                          _camera == null ||
+                          drafts.isCapturing ||
+                          drafts.isLocked ||
+                          widget.uploads?.isLoadingLimits == true
                           ? null
                           : _takePhoto,
                       icon: const Icon(Icons.camera_alt_outlined),
@@ -232,6 +242,10 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                     ],
                     const SizedBox(height: 16),
                     Text(t.draftNotice),
+                    if (widget.uploads != null) ...[
+                      const SizedBox(height: 16),
+                      UploadPanel(controller: widget.uploads!),
+                    ],
                     const SizedBox(height: 24),
                     Text(
                       '${t.pendingPhotos} (${drafts.items.length})',
@@ -243,7 +257,9 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
                       PhotoDraftCard(
                         key: ValueKey(photo.id),
                         photo: photo,
-                        onRemove: () => drafts.remove(photo.id),
+                        onRemove: drafts.isLocked
+                            ? null
+                            : () => drafts.remove(photo.id),
                       ),
                   ],
                 ),
