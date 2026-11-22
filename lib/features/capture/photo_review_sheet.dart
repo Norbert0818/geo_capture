@@ -4,6 +4,7 @@ import '../../core/widgets/control_safe_area.dart';
 import '../../l10n/app_localizations.dart';
 import '../uploads/upload_controller.dart';
 import '../uploads/upload_panel.dart';
+import '../drafts/draft_storage_panel.dart';
 import 'capture_strings.dart';
 import 'photo_draft_card.dart';
 import 'photo_draft_store.dart';
@@ -28,7 +29,10 @@ class PhotoReviewSheet extends StatelessWidget {
     return AnimatedBuilder(
       animation: Listenable.merge([drafts, ?uploads]),
       builder: (context, _) {
-        final busy = drafts.isCapturing || uploads?.isUploading == true;
+        final busy =
+            drafts.isCapturing ||
+                drafts.isSaving ||
+                uploads?.isUploading == true;
         return PopScope(
           canPop: !busy,
           child: FractionallySizedBox(
@@ -70,7 +74,7 @@ class PhotoReviewSheet extends StatelessWidget {
                       key: const ValueKey('photoReviewList'),
                       padding: const EdgeInsets.all(12),
                       children: [
-                        Text(t.draftNotice),
+                        DraftStoragePanel(drafts: drafts),
                         const SizedBox(height: 12),
                         if (uploads != null)
                           UploadPanel(

@@ -12,7 +12,7 @@ class UploadController extends ChangeNotifier {
   final UploadRepository repository;
 
   UploadLimits? limits;
-  UploadBatch? pendingBatch;
+  UploadBatch? get pendingBatch => drafts.pendingBatch;
   UploadReceipt? lastReceipt;
   String? errorCode;
   bool isUploading = false;
@@ -47,6 +47,11 @@ class UploadController extends ChangeNotifier {
     if (_disposed || isUploading || isLoadingLimits || drafts.isCapturing) {
       return;
     }
+    if (!drafts.isReady || drafts.isSaving || drafts.storageErrorCode != null) {
+      errorCode = drafts.storageErrorCode ?? 'local_drafts_read_failed';
+      notifyListeners();
+      return;
+    }
     errorCode = null;
     lastReceipt = null;
     try {
@@ -55,12 +60,13 @@ class UploadController extends ChangeNotifier {
         if (currentLimits == null) {
           throw const ApiException('service_unavailable');
         }
-        pendingBatch = UploadBatch.create(
+        final batch = UploadBatch.create(
           oldSerialNumber: oldSerialNumber,
           newSerialNumber: newSerialNumber,
           photos: drafts.items,
           limits: currentLimits,
         );
+        drafts.beginUpload(batch);
       }
     } on ApiException catch (error) {
       errorCode = error.code;
@@ -75,6 +81,13 @@ class UploadController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // The batch ID, both serials and all photo bytes must survive a restart
+      // before the first HTTP request can reach the server.
+      if (drafts.isPersistent && !await drafts.flush()) {
+        errorCode = drafts.storageErrorCode;
+        return;
+      }
+      if (_disposed) return;
       final receipt = await repository.upload(
         batch,
         onProgress: (sent, total) {
@@ -88,14 +101,18 @@ class UploadController extends ChangeNotifier {
         throw const ApiException('service_unavailable');
       }
       // A progress of 100% only means sent; remove drafts after server confirmation.
-      drafts.removeUploaded(batch.photos.map((photo) => photo.id).toSet());
-      pendingBatch = null;
+      if (!await drafts.confirmUpload()) {
+        errorCode = drafts.storageErrorCode;
+        return;
+      }
       lastReceipt = receipt;
     } on ApiException catch (error) {
       if (_disposed) return;
       errorCode = error.code;
       // These responses reject the batch before saving, so editing is safe.
-      if ({400, 413, 415}.contains(error.statusCode)) pendingBatch = null;
+      if ({400, 413, 415}.contains(error.statusCode)) {
+        await drafts.rejectUpload();
+      }
     } catch (_) {
       if (!_disposed) errorCode = 'service_unavailable';
     } finally {
@@ -110,7 +127,6 @@ class UploadController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    pendingBatch = null;
     super.dispose();
   }
 }

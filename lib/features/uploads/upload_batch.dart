@@ -56,6 +56,26 @@ class UploadBatch {
   final String newSerialNumber;
   final List<PhotoDraft> photos;
 
+  /// Reuse a durable batch exactly; never generate an ID during recovery.
+  factory UploadBatch.restore({
+    required String id,
+    required String oldSerialNumber,
+    required String newSerialNumber,
+    required List<PhotoDraft> photos,
+  }) {
+    if (!_isId(id) ||
+        photos.isEmpty ||
+        oldSerialNumber.trim().isEmpty ||
+        newSerialNumber.trim().isEmpty ||
+        oldSerialNumber != oldSerialNumber.trim() ||
+        newSerialNumber != newSerialNumber.trim() ||
+        photos.map((photo) => photo.id).toSet().length != photos.length ||
+        photos.any((photo) => !_isId(photo.id) || photo.stamped == null)) {
+      throw const FormatException('Invalid saved upload batch');
+    }
+    return UploadBatch._(id, oldSerialNumber, newSerialNumber, photos);
+  }
+
   factory UploadBatch.create({
     required String oldSerialNumber,
     required String newSerialNumber,

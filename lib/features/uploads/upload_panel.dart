@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../capture/photo_draft_store.dart';
+import '../drafts/draft_storage_panel.dart';
+
 import 'upload_batch.dart';
 import 'upload_controller.dart';
 import 'upload_strings.dart';
@@ -41,6 +44,9 @@ class _UploadPanelState extends State<UploadPanel>
     if (_dialogOpen ||
         controller.isUploading ||
         controller.isLoadingLimits ||
+        !controller.drafts.isReady ||
+        controller.drafts.isSaving ||
+        controller.drafts.storageErrorCode != null ||
         controller.drafts.isCapturing ||
         controller.drafts.items.isEmpty) {
       return;
@@ -59,7 +65,10 @@ class _UploadPanelState extends State<UploadPanel>
       if (!mounted || controller.limits == null) return;
       final serial = await showDialog<UploadSerials>(
         context: context,
-        builder: (_) => SerialNumberDialog(limits: controller.limits!),
+        builder: (_) => SerialNumberDialog(
+          limits: controller.limits!,
+          drafts: controller.drafts,
+        ),
       );
       if (mounted && serial != null) {
         await controller.submit(
@@ -149,6 +158,9 @@ class _UploadPanelState extends State<UploadPanel>
                   onPressed:
                   busy ||
                       controller.isLoadingLimits ||
+                      !controller.drafts.isReady ||
+                      controller.drafts.isSaving ||
+                      controller.drafts.storageErrorCode != null ||
                       controller.drafts.isCapturing ||
                       _dialogOpen ||
                       controller.drafts.items.isEmpty
@@ -173,9 +185,10 @@ class _UploadPanelState extends State<UploadPanel>
 }
 
 class SerialNumberDialog extends StatefulWidget {
-  const SerialNumberDialog({super.key, required this.limits});
+  const SerialNumberDialog({super.key, required this.limits, this.drafts});
 
   final UploadLimits limits;
+  final PhotoDraftStore? drafts;
 
   @override
   State<SerialNumberDialog> createState() => _SerialNumberDialogState();
@@ -183,13 +196,39 @@ class SerialNumberDialog extends StatefulWidget {
 
 class _SerialNumberDialogState extends State<SerialNumberDialog> {
   final _form = GlobalKey<FormState>();
-  final _oldSerial = TextEditingController();
-  final _newSerial = TextEditingController();
+  late final TextEditingController _oldSerial;
+  late final TextEditingController _newSerial;
   bool _submitted = false;
 
-  void _submit() {
+  @override
+  void initState() {
+    super.initState();
+    _oldSerial = TextEditingController(
+      text: widget.drafts?.oldSerialNumber ?? '',
+    );
+    _newSerial = TextEditingController(
+      text: widget.drafts?.newSerialNumber ?? '',
+    );
+  }
+
+  void _remember(String _) {
+    widget.drafts?.rememberSerials(_oldSerial.text, _newSerial.text);
+  }
+
+  Future<void> _submit() async {
     if (_submitted || !_form.currentState!.validate()) return;
-    _submitted = true;
+    setState(() => _submitted = true);
+    final drafts = widget.drafts;
+    if (drafts != null) {
+      await drafts.rememberSerials(_oldSerial.text, _newSerial.text);
+      final saved = await drafts.flush();
+      if (!mounted) return;
+      if (!saved) {
+        setState(() => _submitted = false);
+        return;
+      }
+    }
+    if (!mounted) return;
     Navigator.of(context).pop((
     oldSerialNumber: _oldSerial.text.trim(),
     newSerialNumber: _newSerial.text.trim(),
@@ -220,6 +259,7 @@ class _SerialNumberDialogState extends State<SerialNumberDialog> {
               TextFormField(
                 key: const ValueKey('oldSerialNumberField'),
                 controller: _oldSerial,
+                onChanged: _remember,
                 autofocus: true,
                 maxLength: widget.limits.maxSerialNumberLength,
                 textInputAction: TextInputAction.next,
@@ -236,6 +276,7 @@ class _SerialNumberDialogState extends State<SerialNumberDialog> {
               TextFormField(
                 key: const ValueKey('newSerialNumberField'),
                 controller: _newSerial,
+                onChanged: _remember,
                 maxLength: widget.limits.maxSerialNumberLength,
                 textInputAction: TextInputAction.done,
                 textCapitalization: TextCapitalization.none,
@@ -248,6 +289,8 @@ class _SerialNumberDialogState extends State<SerialNumberDialog> {
                     : t.error('invalid_new_serial_number'),
                 onFieldSubmitted: (_) => _submit(),
               ),
+              if (widget.drafts case final drafts?)
+                DraftStoragePanel(drafts: drafts),
             ],
           ),
         ),
@@ -255,12 +298,17 @@ class _SerialNumberDialogState extends State<SerialNumberDialog> {
       actions: [
         TextButton(
           key: const ValueKey('cancelUploadButton'),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _submitted
+              ? null
+              : () async {
+            await widget.drafts?.flush();
+            if (context.mounted) Navigator.of(context).pop();
+          },
           child: Text(t.cancel),
         ),
         FilledButton(
           key: const ValueKey('confirmUploadButton'),
-          onPressed: _submit,
+          onPressed: _submitted ? null : _submit,
           child: Text(t.upload),
         ),
       ],

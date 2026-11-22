@@ -26,10 +26,10 @@ class UploadStrings {
     'Încărcarea nu a fost confirmată. Reîncearcă aceleași fotografii și ambele numere de serie.',
   );
   String get notice => _text(
-    'Photos stay on this device until the server confirms the upload. '
-        'Pending photos are lost if you reload or sign out.',
-    'Fotografiile rămân pe acest dispozitiv până la confirmarea serverului. '
-        'Fotografiile în așteptare se pierd la reîncărcare sau deconectare.',
+    'Photos are saved on this device until the server confirms the upload. '
+        'Sign in with the same account to resume after restarting.',
+    'Fotografiile sunt salvate pe acest dispozitiv până la confirmarea serverului. '
+        'Autentifică-te cu același cont pentru a continua după repornire.',
   );
   String photoLimit(int count) => _text(
     'Maximum $count photos per upload.',
@@ -41,6 +41,16 @@ class UploadStrings {
   );
 
   String error(String code) => switch (code) {
+    'local_drafts_conflict' => _text(
+      'Drafts changed in another window. Reload the saved drafts to continue.',
+      'Ciornele au fost schimbate în altă fereastră. Reîncarcă ciornele salvate pentru a continua.',
+    ),
+    'local_drafts_invalid' ||
+    'local_drafts_read_failed' ||
+    'local_drafts_write_failed' => _text(
+      'Local storage is unavailable. Keep the app open and use the local save controls.',
+      'Stocarea locală nu este disponibilă. Păstrează aplicația deschisă și folosește opțiunile de salvare locală.',
+    ),
     'invalid_old_serial_number' => _text(
       'Enter a valid old serial number within the allowed length.',
       'Introdu un număr de serie vechi valid, în limita de lungime.',

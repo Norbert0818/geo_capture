@@ -4,6 +4,8 @@ import '../../core/api/api_client.dart';
 import '../../core/models/session_user.dart';
 import '../../core/widgets/auth_shell.dart';
 import '../../l10n/app_localizations.dart';
+import '../drafts/draft_snapshot.dart';
+import '../drafts/draft_storage_panel.dart';
 import 'auth_error_message.dart';
 import '../capture/capture_page.dart';
 import '../capture/photo_draft_store.dart';
@@ -27,6 +29,7 @@ class AccountPage extends StatefulWidget {
     this.uploadRepository,
     this.historyRepository,
     this.accountsRepository,
+    this.draftStorage,
   });
 
   final SessionUser user;
@@ -36,27 +39,38 @@ class AccountPage extends StatefulWidget {
   final UploadRepository? uploadRepository;
   final UploadHistoryRepository? historyRepository;
   final AdminAccountsRepository? accountsRepository;
+  final DraftStorage? draftStorage;
 
   @override
   State<AccountPage> createState() => _AccountPageState();
 }
 
 class _AccountPageState extends State<AccountPage> {
-  final _drafts = PhotoDraftStore();
+  late final PhotoDraftStore _drafts;
   UploadController? _uploads;
 
   @override
   void initState() {
     super.initState();
+    _drafts = PhotoDraftStore(
+      persistence: widget.draftStorage?.forUser(widget.user.id),
+    );
+    _drafts.addListener(_draftsChanged);
     final repository = widget.uploadRepository;
     if (repository != null) {
       _uploads = UploadController(drafts: _drafts, repository: repository);
     }
+    _drafts.restore();
+  }
+
+  void _draftsChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _uploads?.dispose();
+    _drafts.removeListener(_draftsChanged);
     _drafts.dispose();
     super.dispose();
   }
@@ -85,7 +99,13 @@ class _AccountPageState extends State<AccountPage> {
   String? _errorCode;
 
   Future<void> _signOut() async {
-    if (_busy) return;
+    if (_busy ||
+        _drafts.isSaving ||
+        _drafts.isCapturing ||
+        _drafts.hasUnsavedChanges ||
+        _uploads?.isUploading == true) {
+      return;
+    }
 
     setState(() {
       _busy = true;
@@ -149,11 +169,14 @@ class _AccountPageState extends State<AccountPage> {
             ),
           ],
           const SizedBox(height: 24),
+          DraftStoragePanel(drafts: _drafts),
           AnimatedBuilder(
             animation: _drafts,
             builder: (context, _) => FilledButton.icon(
               key: const ValueKey('openPhotosButton'),
-              onPressed: _busy ? null : _openPhotos,
+              onPressed: _busy || !_drafts.isReady || _drafts.isSaving
+                  ? null
+                  : _openPhotos,
               icon: const Icon(Icons.photo_camera_outlined),
               label: Text('${t.capturePhotos} (${_drafts.items.length})'),
             ),
@@ -183,12 +206,12 @@ class _AccountPageState extends State<AccountPage> {
               onPressed: _busy
                   ? null
                   : () => Navigator.of(context).push<void>(
-                      MaterialPageRoute(
-                        builder: (_) => AdminAccountsPage(
-                          repository: widget.accountsRepository!,
-                        ),
-                      ),
-                    ),
+                MaterialPageRoute(
+                  builder: (_) => AdminAccountsPage(
+                    repository: widget.accountsRepository!,
+                  ),
+                ),
+              ),
               icon: const Icon(Icons.manage_accounts_outlined),
               label: Text(AdminAccountsStrings.of(context).title),
             ),
@@ -196,7 +219,13 @@ class _AccountPageState extends State<AccountPage> {
           const SizedBox(height: 12),
           OutlinedButton(
             key: const ValueKey('signOutButton'),
-            onPressed: _busy ? null : _signOut,
+            onPressed:
+            _busy ||
+                _drafts.isSaving ||
+                _drafts.isCapturing ||
+                _drafts.hasUnsavedChanges
+                ? null
+                : _signOut,
             child: Text(_busy ? t.signingOut : t.signOut),
           ),
         ],

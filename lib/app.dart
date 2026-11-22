@@ -9,6 +9,7 @@ import 'features/auth/auth_error_message.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/change_password_page.dart';
 import 'features/auth/login_page.dart';
+import 'features/drafts/draft_snapshot.dart';
 import 'features/uploads/upload_repository.dart';
 import 'features/uploads/upload_history_repository.dart';
 import 'features/admin/admin_accounts_repository.dart';
@@ -21,12 +22,14 @@ class GeoCaptureApp extends StatefulWidget {
     this.uploadRepository,
     this.historyRepository,
     this.accountsRepository,
+    this.draftStorage,
   });
 
   final AuthRepository authRepository;
   final UploadRepository? uploadRepository;
   final UploadHistoryRepository? historyRepository;
   final AdminAccountsRepository? accountsRepository;
+  final DraftStorage? draftStorage;
 
   @override
   State<GeoCaptureApp> createState() => _GeoCaptureAppState();
@@ -185,15 +188,19 @@ class _GeoCaptureAppState extends State<GeoCaptureApp> {
       );
     }
 
-    return AccountPage(
-      key: const ValueKey('accountPage'),
-      user: user,
-      locale: _locale,
-      onLocaleChanged: _changeLocale,
-      onSignOut: _signOut,
-      uploadRepository: widget.uploadRepository,
-      historyRepository: widget.historyRepository,
-      accountsRepository: widget.accountsRepository,
+    return KeyedSubtree(
+      key: ValueKey('account-owner:${user.id}'),
+      child: AccountPage(
+        key: const ValueKey('accountPage'),
+        user: user,
+        locale: _locale,
+        onLocaleChanged: _changeLocale,
+        onSignOut: _signOut,
+        uploadRepository: widget.uploadRepository,
+        historyRepository: widget.historyRepository,
+        accountsRepository: widget.accountsRepository,
+        draftStorage: widget.draftStorage,
+      ),
     );
   }
 

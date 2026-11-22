@@ -5,6 +5,7 @@ import '../../core/widgets/control_safe_area.dart';
 import '../../l10n/app_localizations.dart';
 import '../uploads/upload_controller.dart';
 import '../uploads/upload_strings.dart';
+import '../drafts/draft_storage_panel.dart';
 import 'capture_error_message.dart';
 import 'capture_strings.dart';
 import 'camera_framing.dart';
@@ -149,7 +150,10 @@ class _CaptureViewState extends State<CaptureView> {
       builder: (context, _) {
         final drafts = widget.drafts;
         final uploads = widget.uploads;
-        final busy = drafts.isCapturing || uploads?.isUploading == true;
+        final busy =
+            drafts.isCapturing ||
+                drafts.isSaving ||
+                uploads?.isUploading == true;
         final shutterEnabled =
             widget.cameraReady &&
                 !widget.loading &&
@@ -279,6 +283,8 @@ class _CaptureViewState extends State<CaptureView> {
                                     ],
                                   ),
                                   Expanded(child: _cameraStatus(t)),
+                                  if (drafts.storageErrorCode != null)
+                                    DraftStoragePanel(drafts: drafts),
                                   if (drafts.errorCode != null)
                                     Padding(
                                       padding: const EdgeInsets.only(

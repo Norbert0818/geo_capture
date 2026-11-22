@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 import 'core/api/api_client.dart';
 import 'features/auth/auth_repository.dart';
+import 'features/drafts/sembast_draft_storage.dart';
 import 'features/uploads/upload_repository.dart';
 import 'features/uploads/upload_history_repository.dart';
 import 'features/admin/admin_accounts_repository.dart';
@@ -19,7 +20,7 @@ void main() {
   if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
     throw StateError(
       'Web: open the app from https://localhost:7043. '
-      'Native: set --dart-define=API_BASE_URL=https://YOUR_API_HOST.',
+          'Native: set --dart-define=API_BASE_URL=https://YOUR_API_HOST.',
     );
   }
 
@@ -31,6 +32,7 @@ void main() {
       uploadRepository: HttpUploadRepository(api),
       historyRepository: HttpUploadHistoryRepository(api),
       accountsRepository: HttpAdminAccountsRepository(api),
+      draftStorage: SembastDraftStorage(server: baseUrl),
     ),
   );
 }
