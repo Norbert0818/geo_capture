@@ -10,6 +10,8 @@ import 'features/auth/auth_repository.dart';
 import 'features/auth/change_password_page.dart';
 import 'features/auth/login_page.dart';
 import 'features/uploads/upload_repository.dart';
+import 'features/uploads/upload_history_repository.dart';
+import 'features/admin/admin_accounts_repository.dart';
 import 'l10n/app_localizations.dart';
 
 class GeoCaptureApp extends StatefulWidget {
@@ -17,10 +19,14 @@ class GeoCaptureApp extends StatefulWidget {
     super.key,
     required this.authRepository,
     this.uploadRepository,
+    this.historyRepository,
+    this.accountsRepository,
   });
 
   final AuthRepository authRepository;
   final UploadRepository? uploadRepository;
+  final UploadHistoryRepository? historyRepository;
+  final AdminAccountsRepository? accountsRepository;
 
   @override
   State<GeoCaptureApp> createState() => _GeoCaptureAppState();
@@ -186,6 +192,8 @@ class _GeoCaptureAppState extends State<GeoCaptureApp> {
       onLocaleChanged: _changeLocale,
       onSignOut: _signOut,
       uploadRepository: widget.uploadRepository,
+      historyRepository: widget.historyRepository,
+      accountsRepository: widget.accountsRepository,
     );
   }
 

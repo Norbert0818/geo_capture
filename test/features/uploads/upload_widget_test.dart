@@ -59,8 +59,8 @@ void main() {
   });
 
   testWidgets('canceling the serial dialog does not upload or remove photos', (
-      tester,
-      ) async {
+    tester,
+  ) async {
     await drafts.capture(() async => photo(1));
     await start(tester);
     await open(tester);
@@ -73,7 +73,7 @@ void main() {
 
   testWidgets(
     'empty serial stays in the dialog and a valid serial keeps zeros',
-        (tester) async {
+    (tester) async {
       await drafts.capture(() async => photo(1));
       await start(tester);
       await open(tester);
@@ -92,7 +92,7 @@ void main() {
 
   testWidgets(
     'Romanian dialog and success message follow the selected locale',
-        (tester) async {
+    (tester) async {
       await drafts.capture(() async => photo(1));
       await start(tester, language: 'ro');
       expect(find.text('Încarcă fotografiile'), findsOneWidget);
@@ -106,11 +106,11 @@ void main() {
   );
 
   testWidgets('failure retries without opening another serial dialog', (
-      tester,
-      ) async {
+    tester,
+  ) async {
     await drafts.capture(() async => photo(1));
     repository.onUpload = (_) async =>
-    throw const ApiException('service_unavailable');
+        throw const ApiException('service_unavailable');
     await start(tester);
     await open(tester);
     await tester.enterText(key('serialNumberField'), 'A-0001');
@@ -128,8 +128,8 @@ void main() {
   });
 
   testWidgets('waiting for server confirmation does not show success', (
-      tester,
-      ) async {
+    tester,
+  ) async {
     await drafts.capture(() async => photo(1));
     final result = Completer<UploadReceipt>();
     repository.onUpload = (_) => result.future;

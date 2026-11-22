@@ -48,8 +48,9 @@ class _PhotoDraftCardState extends State<PhotoDraftCard> {
             appBar: AppBar(
               title: Text(title),
               leading: IconButton(
-                tooltip: MaterialLocalizations.of(dialogContext)
-                    .closeButtonTooltip,
+                tooltip: MaterialLocalizations.of(
+                  dialogContext,
+                ).closeButtonTooltip,
                 onPressed: () => Navigator.of(dialogContext).pop(),
                 icon: const Icon(Icons.close),
               ),
@@ -119,11 +120,11 @@ class _PhotoDraftCardState extends State<PhotoDraftCard> {
                 Text('${t.capturedAt}: ${_date(photo.capturedAtUtc)}'),
                 Text(
                   '${t.locationMeasuredAt}: '
-                      '${_date(photo.location.measuredAtUtc)}',
+                  '${_date(photo.location.measuredAtUtc)}',
                 ),
                 Text(
                   '${t.locationAccuracy}: '
-                      '${photo.location.accuracyMeters.toStringAsFixed(1)} m',
+                  '${photo.location.accuracyMeters.toStringAsFixed(1)} m',
                 ),
                 const SizedBox(height: 8),
                 Row(

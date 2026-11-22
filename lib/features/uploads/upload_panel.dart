@@ -109,11 +109,11 @@ class _UploadPanelState extends State<UploadPanel> {
                 FilledButton.icon(
                   key: const ValueKey('uploadPhotosButton'),
                   onPressed:
-                  busy ||
-                      controller.isLoadingLimits ||
-                      controller.drafts.isCapturing ||
-                      _dialogOpen ||
-                      controller.drafts.items.isEmpty
+                      busy ||
+                          controller.isLoadingLimits ||
+                          controller.drafts.isCapturing ||
+                          _dialogOpen ||
+                          controller.drafts.items.isEmpty
                       ? null
                       : _upload,
                   icon: const Icon(Icons.cloud_upload_outlined),

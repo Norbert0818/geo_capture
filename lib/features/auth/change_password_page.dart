@@ -16,8 +16,7 @@ class ChangePasswordPage extends StatefulWidget {
 
   final Locale locale;
   final ValueChanged<Locale> onLocaleChanged;
-  final Future<void> Function(String newPassword)
-  onChangePassword;
+  final Future<void> Function(String newPassword) onChangePassword;
   final Future<void> Function() onSignOut;
 
   @override
@@ -42,9 +41,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   }
 
   Future<void> _run(
-      Future<void> Function() action, {
-        bool signingOut = false,
-      }) async {
+    Future<void> Function() action, {
+    bool signingOut = false,
+  }) async {
     if (_busy) return;
 
     FocusScope.of(context).unfocus();
@@ -73,9 +72,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   Future<void> _submit() async {
     if (_busy || !_formKey.currentState!.validate()) return;
 
-    await _run(
-          () => widget.onChangePassword(_newPassword.text),
-    );
+    await _run(() => widget.onChangePassword(_newPassword.text));
   }
 
   String? _validateNewPassword(String? value, AppLocalizations t) {
@@ -126,12 +123,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           onPressed: _busy
               ? null
               : () => setState(() {
-            if (visible) {
-              _visibleFields.remove(name);
-            } else {
-              _visibleFields.add(name);
-            }
-          }),
+                  if (visible) {
+                    _visibleFields.remove(name);
+                  } else {
+                    _visibleFields.add(name);
+                  }
+                }),
           icon: Icon(
             visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
           ),
@@ -209,7 +206,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               FilledButton(
                 key: const ValueKey('savePasswordButton'),
                 onPressed: _busy ? null : _submit,
-                child: Text(_busy && !_signingOut ? t.savingPassword : t.savePassword),
+                child: Text(
+                  _busy && !_signingOut ? t.savingPassword : t.savePassword,
+                ),
               ),
               const SizedBox(height: 8),
               TextButton(

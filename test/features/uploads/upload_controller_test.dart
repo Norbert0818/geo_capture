@@ -43,10 +43,10 @@ void main() {
 
   test(
     'lost confirmation preserves the same ID and photos for a safe retry',
-        () async {
+    () async {
       await drafts.capture(() async => photo(1));
       repository.onUpload = (_) async =>
-      throw const ApiException('service_unavailable');
+          throw const ApiException('service_unavailable');
       await controller.submit('0001');
       final first = controller.pendingBatch;
       expect(drafts.items, hasLength(1));
@@ -66,7 +66,7 @@ void main() {
   test('capture and removal cannot change an unconfirmed batch', () async {
     await drafts.capture(() async => photo(1));
     repository.onUpload = (_) async =>
-    throw const ApiException('service_unavailable', statusCode: 500);
+        throw const ApiException('service_unavailable', statusCode: 500);
     await controller.submit('A');
     var cameraCalled = false;
     await drafts.capture(() async {
@@ -80,10 +80,10 @@ void main() {
 
   test(
     'a definite rejection keeps drafts and enables editing for a new attempt',
-        () async {
+    () async {
       await drafts.capture(() async => photo(1));
       repository.onUpload = (_) async =>
-      throw const ApiException('invalid_photo_time', statusCode: 400);
+          throw const ApiException('invalid_photo_time', statusCode: 400);
       await controller.submit('A');
       expect(controller.pendingBatch, isNull);
       expect(controller.errorCode, 'invalid_photo_time');
@@ -110,7 +110,7 @@ void main() {
 
   test(
     'empty serial and unfinished image are rejected before HTTP submission',
-        () async {
+    () async {
       await drafts.capture(() async => photo(1, prepared: false));
       await controller.submit('   ');
       expect(controller.errorCode, 'invalid_serial_number');

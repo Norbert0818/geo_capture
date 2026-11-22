@@ -15,7 +15,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signInTitle => 'Welcome back';
 
   @override
-  String get signInDescription => 'Sign in to capture and manage your field photos.';
+  String get signInDescription =>
+      'Sign in to capture and manage your field photos.';
 
   @override
   String get username => 'Username';
@@ -42,10 +43,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hidePassword => 'Hide password';
 
   @override
-  String get adminAccountHint => 'Use the account provided by your administrator.';
+  String get adminAccountHint =>
+      'Use the account provided by your administrator.';
 
   @override
-  String get signInUnavailable => 'Sign-in is currently unavailable. Please try again later.';
+  String get signInUnavailable =>
+      'Sign-in is currently unavailable. Please try again later.';
 
   @override
   String get language => 'Language';
@@ -54,16 +57,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get invalidCredentials => 'Incorrect username or password.';
 
   @override
-  String get serviceUnavailable => 'The service is unavailable. Please try again.';
+  String get serviceUnavailable =>
+      'The service is unavailable. Please try again.';
 
   @override
   String get tooManyAttempts => 'Too many attempts. Please wait and try again.';
 
   @override
-  String get sessionExpired => 'Your session has expired. Please sign in again.';
+  String get sessionExpired =>
+      'Your session has expired. Please sign in again.';
 
   @override
-  String get accessDenied => 'You do not have permission to perform this action.';
+  String get accessDenied =>
+      'You do not have permission to perform this action.';
 
   @override
   String get requestExpired => 'The request has expired. Please try again.';
@@ -75,7 +81,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get changePasswordTitle => 'Set your own password';
 
   @override
-  String get changePasswordDescription => 'Change your temporary password before continuing.';
+  String get changePasswordDescription =>
+      'Change your temporary password before continuing.';
 
   @override
   String get currentPassword => 'Current password';
@@ -96,10 +103,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passwordsDoNotMatch => 'The passwords do not match.';
 
   @override
-  String get passwordRules => 'Use at least 12 characters, uppercase and lowercase letters, a number, and 4 different characters.';
+  String get passwordRules =>
+      'Use at least 12 characters, uppercase and lowercase letters, a number, and 4 different characters.';
 
   @override
-  String get passwordUnchanged => 'Choose a password different from your current password.';
+  String get passwordUnchanged =>
+      'Choose a password different from your current password.';
 
   @override
   String get wrongCurrentPassword => 'The current password is incorrect.';
@@ -150,22 +159,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cameraStarting => 'Starting camera...';
 
   @override
-  String get cameraUnavailable => 'No camera is available. Check that another app is not using it.';
+  String get cameraUnavailable =>
+      'No camera is available. Check that another app is not using it.';
 
   @override
-  String get cameraPermissionDenied => 'Allow camera access in your device or browser settings.';
+  String get cameraPermissionDenied =>
+      'Allow camera access in your device or browser settings.';
 
   @override
-  String get locationPermissionDenied => 'Allow location access to attach coordinates to your photos.';
+  String get locationPermissionDenied =>
+      'Allow location access to attach coordinates to your photos.';
 
   @override
-  String get locationServicesDisabled => 'Turn on location services and try again.';
+  String get locationServicesDisabled =>
+      'Turn on location services and try again.';
 
   @override
-  String get locationTimeout => 'Location could not be determined in time. Try again.';
+  String get locationTimeout =>
+      'Location could not be determined in time. Try again.';
 
   @override
-  String get locationUnavailable => 'A recent location is unavailable. Check location access and try again.';
+  String get locationUnavailable =>
+      'A recent location is unavailable. Check location access and try again.';
 
   @override
   String get captureFailed => 'The photo could not be taken. Please try again.';
@@ -189,5 +204,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationAccuracy => 'Location accuracy';
 
   @override
-  String get draftNotice => 'Unuploaded photos are cleared when you close or reload the app.';
+  String get draftNotice =>
+      'Unuploaded photos are cleared when you close or reload the app.';
 }

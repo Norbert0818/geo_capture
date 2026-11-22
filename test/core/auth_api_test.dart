@@ -33,10 +33,10 @@ class FakeAdapter implements HttpClientAdapter {
 
   @override
   Future<ResponseBody> fetch(
-      RequestOptions options,
-      Stream<Uint8List>? requestStream,
-      Future<void>? cancelFuture,
-      ) async {
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
     requests.add(options);
     return handle(options);
   }
@@ -96,9 +96,7 @@ void main() {
     addTearDown(auth.dispose);
 
     await auth.signIn('worker01', 'InitialPassword927');
-    final changed = await auth.changePassword(
-      'ChangedPassword927',
-    );
+    final changed = await auth.changePassword('ChangedPassword927');
     await auth.signOut();
 
     expect(changed.mustChangePassword, isFalse);
@@ -106,10 +104,11 @@ void main() {
     final writes = adapter.requests.where((r) => r.method == 'POST').toList();
     expect(writes[1].path, '/api/auth/initial-password');
     expect(writes[1].data, {'newPassword': 'ChangedPassword927'});
-    expect(
-      writes.map((r) => r.headers['X-CSRF-Token']).toList(),
-      ['csrf-1', 'csrf-2', 'csrf-3'],
-    );
+    expect(writes.map((r) => r.headers['X-CSRF-Token']).toList(), [
+      'csrf-1',
+      'csrf-2',
+      'csrf-3',
+    ]);
   });
 
   test('an expired session restores as signed out', () async {
@@ -131,7 +130,7 @@ void main() {
       auth.restoreSession(),
       throwsA(
         isA<ApiException>().having(
-              (error) => error.code,
+          (error) => error.code,
           'code',
           'service_unavailable',
         ),
@@ -140,18 +139,20 @@ void main() {
   });
 
   test('incorrect credentials produce a specific error', () async {
-    final auth = createRepository(FakeAdapter((request) {
-      return request.path == '/api/auth/csrf'
-          ? jsonResponse({'token': 'csrf'})
-          : jsonResponse(null, status: 401);
-    }));
+    final auth = createRepository(
+      FakeAdapter((request) {
+        return request.path == '/api/auth/csrf'
+            ? jsonResponse({'token': 'csrf'})
+            : jsonResponse(null, status: 401);
+      }),
+    );
     addTearDown(auth.dispose);
 
     await expectLater(
       auth.signIn('worker01', 'wrong-password'),
       throwsA(
         isA<ApiException>().having(
-              (error) => error.code,
+          (error) => error.code,
           'code',
           'invalid_credentials',
         ),
@@ -160,21 +161,23 @@ void main() {
   });
 
   test('a weak new password has its own error', () async {
-    final auth = createRepository(FakeAdapter((request) {
-      return request.path == '/api/auth/csrf'
-          ? jsonResponse({'token': 'csrf'})
-          : jsonResponse({
-        'code': 'password_change_failed',
-        'details': ['PasswordTooShort'],
-      }, status: 400);
-    }));
+    final auth = createRepository(
+      FakeAdapter((request) {
+        return request.path == '/api/auth/csrf'
+            ? jsonResponse({'token': 'csrf'})
+            : jsonResponse({
+                'code': 'password_change_failed',
+                'details': ['PasswordTooShort'],
+              }, status: 400);
+      }),
+    );
     addTearDown(auth.dispose);
 
     await expectLater(
       auth.changePassword('short'),
       throwsA(
         isA<ApiException>().having(
-              (error) => error.code,
+          (error) => error.code,
           'code',
           'password_rules',
         ),
@@ -199,10 +202,7 @@ void main() {
   test('a user response must include the password-change flag', () {
     final json = userJson()..remove('mustChangePassword');
 
-    expect(
-          () => SessionUser.fromJson(json),
-      throwsFormatException,
-    );
+    expect(() => SessionUser.fromJson(json), throwsFormatException);
   });
 
   test('the repository returns an existing session', () async {

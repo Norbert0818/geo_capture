@@ -34,8 +34,8 @@ class UploadLimits {
   String? serialError(String value) {
     final serial = value.trim();
     return serial.isEmpty ||
-        serial.length > maxSerialNumberLength ||
-        RegExp(r'[\x00-\x1f\x7f-\x9f]').hasMatch(serial)
+            serial.length > maxSerialNumberLength ||
+            RegExp(r'[\x00-\x1f\x7f-\x9f]').hasMatch(serial)
         ? 'invalid_serial_number'
         : null;
   }
@@ -43,7 +43,7 @@ class UploadLimits {
 
 class UploadBatch {
   UploadBatch._(this.id, this.serialNumber, List<PhotoDraft> photos)
-      : photos = List.unmodifiable(photos);
+    : photos = List.unmodifiable(photos);
 
   final String id;
   final String serialNumber;
@@ -105,9 +105,10 @@ class UploadBatch {
   };
 
   static bool _isId(String value) =>
-      RegExp(r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')
-          .hasMatch(value) &&
-          value != '00000000-0000-0000-0000-000000000000';
+      RegExp(
+        r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$',
+      ).hasMatch(value) &&
+      value != '00000000-0000-0000-0000-000000000000';
 }
 
 class UploadReceipt {
@@ -165,12 +166,12 @@ class UploadReceipt {
 
   bool confirms(UploadBatch batch) =>
       clientUploadId.toLowerCase() == batch.id.toLowerCase() &&
-          serialNumber == batch.serialNumber &&
-          photoIds.length == batch.photos.length &&
-          photoIds.map((id) => id.toLowerCase()).toSet().length ==
-              photoIds.length &&
-          photoIds
-              .map((id) => id.toLowerCase())
-              .toSet()
-              .containsAll(batch.photos.map((photo) => photo.id.toLowerCase()));
+      serialNumber == batch.serialNumber &&
+      photoIds.length == batch.photos.length &&
+      photoIds.map((id) => id.toLowerCase()).toSet().length ==
+          photoIds.length &&
+      photoIds
+          .map((id) => id.toLowerCase())
+          .toSet()
+          .containsAll(batch.photos.map((photo) => photo.id.toLowerCase()));
 }

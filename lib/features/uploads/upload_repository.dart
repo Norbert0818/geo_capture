@@ -9,9 +9,9 @@ abstract interface class UploadRepository {
   Future<UploadLimits> getLimits();
 
   Future<UploadReceipt> upload(
-      UploadBatch batch, {
-        void Function(int sent, int total)? onProgress,
-      });
+    UploadBatch batch, {
+    void Function(int sent, int total)? onProgress,
+  });
 }
 
 class HttpUploadRepository implements UploadRepository {
@@ -32,9 +32,9 @@ class HttpUploadRepository implements UploadRepository {
 
   @override
   Future<UploadReceipt> upload(
-      UploadBatch batch, {
-        void Function(int sent, int total)? onProgress,
-      }) async {
+    UploadBatch batch, {
+    void Function(int sent, int total)? onProgress,
+  }) async {
     // FormData is single-use. Rebuild it for every attempt, keeping the batch ID.
     final form = FormData();
     form.fields.add(MapEntry('manifest', jsonEncode(batch.manifest)));

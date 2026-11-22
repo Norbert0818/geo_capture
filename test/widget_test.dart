@@ -9,10 +9,7 @@ import 'package:geo_capture/features/auth/auth_repository.dart';
 
 Finder byName(String name) => find.byKey(ValueKey(name));
 
-SessionUser testUser({
-  bool mustChangePassword = true,
-  bool admin = false,
-}) {
+SessionUser testUser({bool mustChangePassword = true, bool admin = false}) {
   return SessionUser(
     id: 'b1da98c8-87cc-473b-bd91-834c36a63591',
     username: 'worker01',
@@ -70,19 +67,12 @@ class FakeAuthRepository implements AuthRepository {
   void dispose() {}
 }
 
-Future<void> start(
-    WidgetTester tester,
-    FakeAuthRepository auth,
-    ) async {
+Future<void> start(WidgetTester tester, FakeAuthRepository auth) async {
   await tester.pumpWidget(GeoCaptureApp(authRepository: auth));
   await tester.pumpAndSettle();
 }
 
-Future<void> enter(
-    WidgetTester tester,
-    String name,
-    String value,
-    ) async {
+Future<void> enter(WidgetTester tester, String name, String value) async {
   await tester.ensureVisible(byName(name));
   await tester.enterText(byName(name), value);
 }
@@ -94,19 +84,19 @@ Future<void> press(WidgetTester tester, String name) async {
 }
 
 Future<void> fillLogin(
-    WidgetTester tester, {
-      String username = 'worker01',
-      String password = 'InitialPassword927',
-    }) async {
+  WidgetTester tester, {
+  String username = 'worker01',
+  String password = 'InitialPassword927',
+}) async {
   await enter(tester, 'usernameField', username);
   await enter(tester, 'passwordField', password);
 }
 
 Future<void> fillPasswords(
-    WidgetTester tester, {
-      String next = 'ChangedPassword927',
-      String confirmation = 'ChangedPassword927',
-    }) async {
+  WidgetTester tester, {
+  String next = 'ChangedPassword927',
+  String confirmation = 'ChangedPassword927',
+}) async {
   await enter(tester, 'newPasswordField', next);
   await enter(tester, 'confirmPasswordField', confirmation);
 }
@@ -120,7 +110,9 @@ void main() {
     expect(find.text('Register'), findsNothing);
   });
 
-  testWidgets('changing language preserves entered credentials', (tester) async {
+  testWidgets('changing language preserves entered credentials', (
+    tester,
+  ) async {
     await start(tester, FakeAuthRepository());
     await fillLogin(tester);
 
@@ -149,32 +141,32 @@ void main() {
     expect(auth.signInCalls, 0);
   });
 
-  testWidgets('sign-in submits once and preserves password spaces',
-          (tester) async {
-        final pending = Completer<SessionUser>();
-        final auth = FakeAuthRepository()
-          ..onSignIn = (_, _) => pending.future;
-        await start(tester, auth);
-        await fillLogin(tester, username: '  worker01  ', password: ' secret ');
+  testWidgets('sign-in submits once and preserves password spaces', (
+    tester,
+  ) async {
+    final pending = Completer<SessionUser>();
+    final auth = FakeAuthRepository()..onSignIn = (_, _) => pending.future;
+    await start(tester, auth);
+    await fillLogin(tester, username: '  worker01  ', password: ' secret ');
 
-        await tester.ensureVisible(byName('signInButton'));
-        await tester.tap(byName('signInButton'));
-        await tester.pump();
+    await tester.ensureVisible(byName('signInButton'));
+    await tester.tap(byName('signInButton'));
+    await tester.pump();
 
-        expect(auth.signInCalls, 1);
-        expect(auth.lastUsername, 'worker01');
-        expect(auth.lastPassword, ' secret ');
-        expect(
-          tester.widget<FilledButton>(byName('signInButton')).onPressed,
-          isNull,
-        );
+    expect(auth.signInCalls, 1);
+    expect(auth.lastUsername, 'worker01');
+    expect(auth.lastPassword, ' secret ');
+    expect(
+      tester.widget<FilledButton>(byName('signInButton')).onPressed,
+      isNull,
+    );
 
-        pending.complete(testUser());
-        await tester.pumpAndSettle();
+    pending.complete(testUser());
+    await tester.pumpAndSettle();
 
-        expect(byName('changePasswordPage'), findsOneWidget);
-        expect(byName('accountPage'), findsNothing);
-      });
+    expect(byName('changePasswordPage'), findsOneWidget);
+    expect(byName('accountPage'), findsNothing);
+  });
 
   testWidgets('invalid credentials have a translated message', (tester) async {
     final auth = FakeAuthRepository()
@@ -197,82 +189,88 @@ void main() {
     );
   });
 
-  testWidgets('a restored pending account still requires a password change',
-          (tester) async {
-        final auth = FakeAuthRepository(restoredUser: testUser());
-        await start(tester, auth);
+  testWidgets('a restored pending account still requires a password change', (
+    tester,
+  ) async {
+    final auth = FakeAuthRepository(restoredUser: testUser());
+    await start(tester, auth);
 
-        expect(byName('changePasswordPage'), findsOneWidget);
-        expect(byName('currentPasswordField'), findsNothing);
-        expect(byName('accountPage'), findsNothing);
+    expect(byName('changePasswordPage'), findsOneWidget);
+    expect(byName('currentPasswordField'), findsNothing);
+    expect(byName('accountPage'), findsNothing);
 
-        await press(tester, 'signOutButton');
+    await press(tester, 'signOutButton');
 
-        expect(auth.signOutCalls, 1);
-        expect(byName('usernameField'), findsOneWidget);
-      });
+    expect(auth.signOutCalls, 1);
+    expect(byName('usernameField'), findsOneWidget);
+  });
 
-  testWidgets('a restored completed admin account opens its account page',
-          (tester) async {
-        await start(
-          tester,
-          FakeAuthRepository(
-            restoredUser: testUser(mustChangePassword: false, admin: true),
-          ),
-        );
+  testWidgets('a restored completed admin account opens its account page', (
+    tester,
+  ) async {
+    await start(
+      tester,
+      FakeAuthRepository(
+        restoredUser: testUser(mustChangePassword: false, admin: true),
+      ),
+    );
 
-        expect(byName('accountPage'), findsOneWidget);
-        expect(find.text('Administrator'), findsOneWidget);
-        expect(byName('changePasswordPage'), findsNothing);
-      });
+    expect(byName('accountPage'), findsOneWidget);
+    expect(find.text('Administrator'), findsOneWidget);
+    expect(byName('changePasswordPage'), findsNothing);
+  });
 
-  testWidgets('weak and mismatched passwords are rejected',
-          (tester) async {
-        final auth = FakeAuthRepository(restoredUser: testUser());
-        await start(tester, auth);
+  testWidgets('weak and mismatched passwords are rejected', (tester) async {
+    final auth = FakeAuthRepository(restoredUser: testUser());
+    await start(tester, auth);
 
-        await fillPasswords(tester, next: 'short', confirmation: 'short');
-        await press(tester, 'savePasswordButton');
-        expect(auth.changeCalls, 0);
+    await fillPasswords(tester, next: 'short', confirmation: 'short');
+    await press(tester, 'savePasswordButton');
+    expect(auth.changeCalls, 0);
 
-        await fillPasswords(tester, confirmation: 'DifferentPassword927');
-        await press(tester, 'savePasswordButton');
-        expect(find.text('The passwords do not match.'), findsOneWidget);
-        expect(auth.changeCalls, 0);
-      });
+    await fillPasswords(tester, confirmation: 'DifferentPassword927');
+    await press(tester, 'savePasswordButton');
+    expect(find.text('The passwords do not match.'), findsOneWidget);
+    expect(auth.changeCalls, 0);
+  });
 
-  testWidgets('successful password change opens the account page',
-          (tester) async {
-        final auth = FakeAuthRepository(restoredUser: testUser());
-        await start(tester, auth);
+  testWidgets('successful password change opens the account page', (
+    tester,
+  ) async {
+    final auth = FakeAuthRepository(restoredUser: testUser());
+    await start(tester, auth);
 
-        await fillPasswords(
-          tester,
-          next: ' ChangedPassword927 ',
-          confirmation: ' ChangedPassword927 ',
-        );
-        await press(tester, 'savePasswordButton');
+    await fillPasswords(
+      tester,
+      next: ' ChangedPassword927 ',
+      confirmation: ' ChangedPassword927 ',
+    );
+    await press(tester, 'savePasswordButton');
 
-        expect(auth.changeCalls, 1);
-        expect(auth.lastNewPassword, ' ChangedPassword927 ');
-        expect(byName('accountPage'), findsOneWidget);
-        expect(byName('changePasswordPage'), findsNothing);
-      });
+    expect(auth.changeCalls, 1);
+    expect(auth.lastNewPassword, ' ChangedPassword927 ');
+    expect(byName('accountPage'), findsOneWidget);
+    expect(byName('changePasswordPage'), findsNothing);
+  });
 
-  testWidgets('the existing password is rejected by the server',
-          (tester) async {
-        final auth = FakeAuthRepository(restoredUser: testUser())
-          ..onChangePassword = (_) async {
-            throw const ApiException('password_unchanged', statusCode: 400);
-          };
-        await start(tester, auth);
-        await fillPasswords(tester);
-        await press(tester, 'savePasswordButton');
+  testWidgets('the existing password is rejected by the server', (
+    tester,
+  ) async {
+    final auth = FakeAuthRepository(restoredUser: testUser())
+      ..onChangePassword = (_) async {
+        throw const ApiException('password_unchanged', statusCode: 400);
+      };
+    await start(tester, auth);
+    await fillPasswords(tester);
+    await press(tester, 'savePasswordButton');
 
-        expect(find.text('Choose a password different from your current password.'), findsOneWidget);
-        expect(byName('changePasswordPage'), findsOneWidget);
-        expect(byName('accountPage'), findsNothing);
-      });
+    expect(
+      find.text('Choose a password different from your current password.'),
+      findsOneWidget,
+    );
+    expect(byName('changePasswordPage'), findsOneWidget);
+    expect(byName('accountPage'), findsNothing);
+  });
 
   testWidgets('an expired session returns to sign-in', (tester) async {
     final auth = FakeAuthRepository(restoredUser: testUser())
@@ -291,53 +289,57 @@ void main() {
     expect(byName('accountPage'), findsNothing);
   });
 
-  testWidgets('a later login respects the completed password-change flag',
-          (tester) async {
-        final auth = FakeAuthRepository(
-          restoredUser: testUser(mustChangePassword: false),
-        )..onSignIn = (_, _) async => testUser(mustChangePassword: false);
-        await start(tester, auth);
-        await press(tester, 'signOutButton');
+  testWidgets('a later login respects the completed password-change flag', (
+    tester,
+  ) async {
+    final auth = FakeAuthRepository(
+      restoredUser: testUser(mustChangePassword: false),
+    )..onSignIn = (_, _) async => testUser(mustChangePassword: false);
+    await start(tester, auth);
+    await press(tester, 'signOutButton');
 
-        await fillLogin(tester, password: 'ChangedPassword927');
-        await press(tester, 'signInButton');
+    await fillLogin(tester, password: 'ChangedPassword927');
+    await press(tester, 'signInButton');
 
-        expect(auth.signOutCalls, 1);
-        expect(byName('accountPage'), findsOneWidget);
-        expect(byName('changePasswordPage'), findsNothing);
-      });
+    expect(auth.signOutCalls, 1);
+    expect(byName('accountPage'), findsOneWidget);
+    expect(byName('changePasswordPage'), findsNothing);
+  });
 
-  testWidgets('startup waits for the server and allows retry after failure',
-          (tester) async {
-        final pending = Completer<SessionUser?>();
-        var calls = 0;
-        final auth = FakeAuthRepository()
-          ..onRestore = () {
-            calls++;
-            return calls == 1
-                ? pending.future
-                : Future.value(testUser(mustChangePassword: false));
-          };
+  testWidgets('startup waits for the server and allows retry after failure', (
+    tester,
+  ) async {
+    final pending = Completer<SessionUser?>();
+    var calls = 0;
+    final auth = FakeAuthRepository()
+      ..onRestore = () {
+        calls++;
+        return calls == 1
+            ? pending.future
+            : Future.value(testUser(mustChangePassword: false));
+      };
 
-        await tester.pumpWidget(GeoCaptureApp(authRepository: auth));
-        await tester.pump();
+    await tester.pumpWidget(GeoCaptureApp(authRepository: auth));
+    await tester.pump();
 
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
-        expect(byName('usernameField'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(byName('usernameField'), findsNothing);
 
-        pending.completeError(const ApiException('service_unavailable'));
-        await tester.pumpAndSettle();
+    pending.completeError(const ApiException('service_unavailable'));
+    await tester.pumpAndSettle();
 
-        expect(byName('startupError'), findsOneWidget);
-        expect(byName('usernameField'), findsNothing);
+    expect(byName('startupError'), findsOneWidget);
+    expect(byName('usernameField'), findsNothing);
 
-        await press(tester, 'retrySessionButton');
+    await press(tester, 'retrySessionButton');
 
-        expect(calls, 2);
-        expect(byName('accountPage'), findsOneWidget);
-      });
+    expect(calls, 2);
+    expect(byName('accountPage'), findsOneWidget);
+  });
 
-  testWidgets('the Romanian password form fits a narrow screen', (tester) async {
+  testWidgets('the Romanian password form fits a narrow screen', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(320, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 

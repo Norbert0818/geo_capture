@@ -32,17 +32,21 @@ class HttpAuthRepository implements AuthRepository {
 
   @override
   Future<SessionUser> signIn(String username, String password) async {
-    return _readUser(await _api.post('/api/auth/login', {
-      'username': username.trim(),
-      'password': password,
-    }));
+    return _readUser(
+      await _api.post('/api/auth/login', {
+        'username': username.trim(),
+        'password': password,
+      }),
+    );
   }
 
   @override
   Future<SessionUser> changePassword(String newPassword) async {
-    return _readUser(await _api.post('/api/auth/initial-password', {
-      'newPassword': newPassword,
-    }));
+    return _readUser(
+      await _api.post('/api/auth/initial-password', {
+        'newPassword': newPassword,
+      }),
+    );
   }
 
   @override

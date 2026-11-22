@@ -9,6 +9,13 @@ import '../capture/capture_page.dart';
 import '../capture/photo_draft_store.dart';
 import '../uploads/upload_controller.dart';
 import '../uploads/upload_repository.dart';
+import '../uploads/history_strings.dart';
+import '../uploads/upload_history_page.dart';
+import '../uploads/upload_history_repository.dart';
+import '../admin/admin_uploads_page.dart';
+import '../admin/admin_accounts_page.dart';
+import '../admin/admin_accounts_repository.dart';
+import '../admin/admin_accounts_strings.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({
@@ -18,6 +25,8 @@ class AccountPage extends StatefulWidget {
     required this.onLocaleChanged,
     required this.onSignOut,
     this.uploadRepository,
+    this.historyRepository,
+    this.accountsRepository,
   });
 
   final SessionUser user;
@@ -25,6 +34,8 @@ class AccountPage extends StatefulWidget {
   final ValueChanged<Locale> onLocaleChanged;
   final Future<void> Function() onSignOut;
   final UploadRepository? uploadRepository;
+  final UploadHistoryRepository? historyRepository;
+  final AdminAccountsRepository? accountsRepository;
 
   @override
   State<AccountPage> createState() => _AccountPageState();
@@ -58,6 +69,18 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
+  void _openUploads({bool allUsers = false}) {
+    final repository = widget.historyRepository;
+    if (repository == null || (allUsers && !widget.user.isAdmin)) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => allUsers
+            ? AdminUploadsPage(repository: repository)
+            : UploadHistoryPage(repository: repository),
+      ),
+    );
+  }
+
   bool _busy = false;
   String? _errorCode;
 
@@ -84,6 +107,7 @@ class _AccountPageState extends State<AccountPage> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final history = HistoryStrings.of(context);
 
     return AuthShell(
       locale: widget.locale,
@@ -134,6 +158,41 @@ class _AccountPageState extends State<AccountPage> {
               label: Text('${t.capturePhotos} (${_drafts.items.length})'),
             ),
           ),
+          if (widget.historyRepository != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const ValueKey('myUploadsButton'),
+              onPressed: _busy ? null : () => _openUploads(),
+              icon: const Icon(Icons.photo_library_outlined),
+              label: Text(history.myUploads),
+            ),
+            if (widget.user.isAdmin) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                key: const ValueKey('allUploadsButton'),
+                onPressed: _busy ? null : () => _openUploads(allUsers: true),
+                icon: const Icon(Icons.admin_panel_settings_outlined),
+                label: Text(history.allUploads),
+              ),
+            ],
+          ],
+          if (widget.user.isAdmin && widget.accountsRepository != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const ValueKey('manageUsersButton'),
+              onPressed: _busy
+                  ? null
+                  : () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => AdminAccountsPage(
+                          repository: widget.accountsRepository!,
+                        ),
+                      ),
+                    ),
+              icon: const Icon(Icons.manage_accounts_outlined),
+              label: Text(AdminAccountsStrings.of(context).title),
+            ),
+          ],
           const SizedBox(height: 12),
           OutlinedButton(
             key: const ValueKey('signOutButton'),
