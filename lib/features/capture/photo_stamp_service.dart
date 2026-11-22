@@ -4,14 +4,19 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
 import 'photo_draft.dart';
+import 'photo_stamp_style.dart';
 import 'stamped_photo.dart';
 
 class PhotoStampService {
+  PhotoStampService({this.style = const PhotoStampStyle()});
+
+  final PhotoStampStyle style;
+
   Future<StampedPhoto> stamp(PhotoDraft photo) async {
     try {
       return await compute(
         _stampPhoto,
-        _StampRequest(photo.originalBytes, photo.location.overlayText),
+        _StampRequest(photo.originalBytes, photo.location.overlayText, style),
         debugLabel: 'photo-stamp',
       );
     } catch (_) {
@@ -21,10 +26,11 @@ class PhotoStampService {
 }
 
 class _StampRequest {
-  const _StampRequest(this.bytes, this.overlayText);
+  const _StampRequest(this.bytes, this.overlayText, this.style);
 
   final Uint8List bytes;
   final String overlayText;
+  final PhotoStampStyle style;
 }
 
 StampedPhoto _stampPhoto(_StampRequest request) {
@@ -70,7 +76,7 @@ StampedPhoto _stampPhoto(_StampRequest request) {
 
   final shortEdge = math.min(photo.width, photo.height);
   final margin = math.min((shortEdge * 0.015).round(), (shortEdge - 1) ~/ 2);
-  final lineHeight = (shortEdge * 0.027).clamp(16.0, 64.0);
+  final lineHeight = request.style.textHeight(shortEdge);
   final availableWidth = photo.width - margin * 2;
   final availableHeight = photo.height - margin * 2;
   final scale = math.min(
