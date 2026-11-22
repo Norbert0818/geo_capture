@@ -5,20 +5,44 @@ import 'upload_controller.dart';
 import 'upload_strings.dart';
 
 class UploadPanel extends StatefulWidget {
-  const UploadPanel({super.key, required this.controller});
+  const UploadPanel({
+    super.key,
+    required this.controller,
+    this.promptForSerial = false,
+  });
 
   final UploadController controller;
+  final bool promptForSerial;
 
   @override
   State<UploadPanel> createState() => _UploadPanelState();
 }
 
-class _UploadPanelState extends State<UploadPanel> {
+class _UploadPanelState extends State<UploadPanel>
+    with AutomaticKeepAliveClientMixin<UploadPanel> {
   bool _dialogOpen = false;
+
+  // Keep the one-time serial prompt consumed when this list item scrolls away.
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.promptForSerial) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _upload();
+      });
+    }
+  }
 
   Future<void> _upload() async {
     final controller = widget.controller;
-    if (_dialogOpen || controller.isUploading || controller.isLoadingLimits) {
+    if (_dialogOpen ||
+        controller.isUploading ||
+        controller.isLoadingLimits ||
+        controller.drafts.isCapturing ||
+        controller.drafts.items.isEmpty) {
       return;
     }
     final pending = controller.pendingBatch;
@@ -42,6 +66,7 @@ class _UploadPanelState extends State<UploadPanel> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final controller = widget.controller;
     final t = UploadStrings.of(context);
     return AnimatedBuilder(
@@ -109,11 +134,11 @@ class _UploadPanelState extends State<UploadPanel> {
                 FilledButton.icon(
                   key: const ValueKey('uploadPhotosButton'),
                   onPressed:
-                      busy ||
-                          controller.isLoadingLimits ||
-                          controller.drafts.isCapturing ||
-                          _dialogOpen ||
-                          controller.drafts.items.isEmpty
+                  busy ||
+                      controller.isLoadingLimits ||
+                      controller.drafts.isCapturing ||
+                      _dialogOpen ||
+                      controller.drafts.items.isEmpty
                       ? null
                       : _upload,
                   icon: const Icon(Icons.cloud_upload_outlined),
@@ -164,6 +189,8 @@ class _SerialNumberDialogState extends State<SerialNumberDialog> {
   Widget build(BuildContext context) {
     final t = UploadStrings.of(context);
     return AlertDialog(
+      scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       title: Text(t.serial),
       content: SizedBox(
         width: 360,

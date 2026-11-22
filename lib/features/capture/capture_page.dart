@@ -1,13 +1,11 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
 import '../uploads/upload_controller.dart';
-import '../uploads/upload_panel.dart';
-import 'capture_error_message.dart';
+import 'camera_preview_cover.dart';
+import 'capture_view.dart';
 import 'photo_capture_service.dart';
 import 'photo_draft.dart';
-import 'photo_draft_card.dart';
 import 'photo_draft_store.dart';
 import 'photo_preparation_service.dart';
 
@@ -84,7 +82,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       }
 
       final description = cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.back,
+            (camera) => camera.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
       );
 
@@ -103,8 +101,8 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
       error = failure.code;
     } on CameraException catch (failure) {
       error =
-          failure.code.startsWith('CameraAccess') ||
-              failure.code == 'permissionDenied'
+      failure.code.startsWith('CameraAccess') ||
+          failure.code == 'permissionDenied'
           ? 'camera_denied'
           : 'camera_unavailable';
     } catch (_) {
@@ -126,8 +124,8 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if ((state == AppLifecycleState.inactive ||
-            state == AppLifecycleState.paused ||
-            state == AppLifecycleState.hidden) &&
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) &&
         !_suspended &&
         _camera?.value.isInitialized == true) {
       _suspended = true;
@@ -147,7 +145,7 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     if (_loading || camera == null || !camera.value.isInitialized) return;
 
     await widget.drafts.capture(
-      () => _capture.capture(() async {
+          () => _capture.capture(() async {
         if (!mounted ||
             generation != _generation ||
             !identical(camera, _camera)) {
@@ -170,104 +168,18 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-
-    return AnimatedBuilder(
-      animation: Listenable.merge([
-        widget.drafts,
-        if (widget.uploads != null) widget.uploads!,
-      ]),
-      builder: (context, _) {
-        final drafts = widget.drafts;
-
-        return PopScope(
-          canPop: !drafts.isCapturing && widget.uploads?.isUploading != true,
-          child: Scaffold(
-            appBar: AppBar(title: Text(t.captureTitle)),
-            body: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 900),
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    SizedBox(
-                      height: 320,
-                      child: _loading
-                          ? Center(child: Text(t.cameraStarting))
-                          : _cameraError != null
-                          ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  captureErrorMessage(t, _cameraError!),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 16),
-                                OutlinedButton(
-                                  onPressed: _startCamera,
-                                  child: Text(t.retry),
-                                ),
-                              ],
-                            )
-                          : ColoredBox(
-                              color: Colors.black,
-                              child: Center(child: CameraPreview(_camera!)),
-                            ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      key: const ValueKey('takePhotoButton'),
-                      onPressed:
-                          _loading ||
-                              _camera == null ||
-                              drafts.isCapturing ||
-                              drafts.isLocked ||
-                              widget.uploads?.isLoadingLimits == true
-                          ? null
-                          : _takePhoto,
-                      icon: const Icon(Icons.camera_alt_outlined),
-                      label: Text(
-                        drafts.isCapturing ? t.takingPhoto : t.takePhoto,
-                      ),
-                    ),
-                    if (drafts.errorCode != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        captureErrorMessage(t, drafts.errorCode!),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    Text(t.draftNotice),
-                    if (widget.uploads != null) ...[
-                      const SizedBox(height: 16),
-                      UploadPanel(controller: widget.uploads!),
-                    ],
-                    const SizedBox(height: 24),
-                    Text(
-                      '${t.pendingPhotos} (${drafts.items.length})',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    if (drafts.items.isEmpty) Text(t.noPhotosYet),
-                    for (final photo in drafts.items)
-                      PhotoDraftCard(
-                        key: ValueKey(photo.id),
-                        photo: photo,
-                        onRemove: drafts.isLocked
-                            ? null
-                            : () => drafts.remove(photo.id),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    final camera = _camera;
+    return CaptureView(
+      drafts: widget.drafts,
+      uploads: widget.uploads,
+      loading: _loading,
+      cameraReady: camera?.value.isInitialized == true,
+      cameraError: _cameraError,
+      onRetry: _startCamera,
+      onTakePhoto: _takePhoto,
+      preview: camera == null
+          ? const SizedBox.shrink()
+          : FullscreenCameraPreview(controller: camera),
     );
   }
 }
