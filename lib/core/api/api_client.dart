@@ -3,9 +3,9 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import 'api_transport.dart'
-    if (dart.library.io) 'api_transport_io.dart'
-    if (dart.library.js_interop) 'api_transport_web.dart'
-    as transport;
+if (dart.library.io) 'api_transport_io.dart'
+if (dart.library.js_interop) 'api_transport_web.dart'
+as transport;
 
 class ApiException implements Exception {
   const ApiException(this.code, {this.statusCode});
@@ -19,24 +19,24 @@ class ApiException implements Exception {
 
 class ApiClient {
   ApiClient(String baseUrl)
-    : _dio = transport.createDio(
-        BaseOptions(
-          baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 20),
-          contentType: Headers.jsonContentType,
-          headers: const {'Accept': 'application/json'},
-        ),
-      );
+      : _dio = transport.createDio(
+    BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 20),
+      contentType: Headers.jsonContentType,
+      headers: const {'Accept': 'application/json'},
+    ),
+  );
 
   ApiClient.fromDio(this._dio);
 
   final Dio _dio;
 
   Future<Map<String, dynamic>> get(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-  }) async {
+      String path, {
+        Map<String, dynamic>? queryParameters,
+      }) async {
     try {
       final response = await _dio.get<dynamic>(
         path,
@@ -78,9 +78,9 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> post(
-    String path,
-    Map<String, dynamic> body,
-  ) async {
+      String path,
+      Map<String, dynamic> body,
+      ) async {
     final csrf = await get('/api/auth/csrf');
     final token = csrf['token'];
 
@@ -102,10 +102,10 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> postMultipart(
-    String path,
-    FormData body, {
-    ProgressCallback? onSendProgress,
-  }) async {
+      String path,
+      FormData body, {
+        ProgressCallback? onSendProgress,
+      }) async {
     final csrf = await get('/api/auth/csrf');
     final token = csrf['token'];
     if (token is! String || token.isEmpty) {
@@ -179,6 +179,8 @@ class ApiClient {
       'invalid_upload_form',
       'invalid_manifest',
       'invalid_serial_number',
+      'invalid_old_serial_number',
+      'invalid_new_serial_number',
       'duplicate_photo_id',
       'duplicate_photo_file',
       'invalid_photo',

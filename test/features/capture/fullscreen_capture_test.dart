@@ -103,8 +103,9 @@ void main() {
   Future<void> beginUpload(WidgetTester tester, String serial) async {
     await tester.tap(key('openUploadButton'));
     await tester.pumpAndSettle();
-    expect(key('serialNumberField'), findsOneWidget);
-    await tester.enterText(key('serialNumberField'), serial);
+    expect(key('newSerialNumberField'), findsOneWidget);
+    await tester.enterText(key('oldSerialNumberField'), 'OLD');
+    await tester.enterText(key('newSerialNumberField'), serial);
     await tester.tap(key('confirmUploadButton'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -236,7 +237,7 @@ void main() {
     );
     await gallery(tester);
     expect(find.text('No photos yet.'), findsOneWidget);
-    expect(key('serialNumberField'), findsNothing);
+    expect(key('newSerialNumberField'), findsNothing);
     expect(repository.batches, isEmpty);
     await tester.tap(key('closePhotoReviewButton'));
     await tester.pumpAndSettle();
@@ -265,7 +266,7 @@ void main() {
     await start(tester);
     await tester.tap(key('openUploadButton'));
     await tester.pumpAndSettle();
-    expect(key('serialNumberField'), findsOneWidget);
+    expect(key('newSerialNumberField'), findsOneWidget);
     await tester.tap(key('cancelUploadButton'));
     await tester.pumpAndSettle();
     expect(repository.batches, isEmpty);
@@ -281,7 +282,7 @@ void main() {
       await drafts.capture(() async => photo(1));
       await start(tester);
       await beginUpload(tester, '000123');
-      expect(repository.batches.single.serialNumber, '000123');
+      expect(repository.batches.single.newSerialNumber, '000123');
       expect(drafts.items, hasLength(1));
       expect(
         tester.widget<IconButton>(key('closePhotoReviewButton')).onPressed,
@@ -325,7 +326,7 @@ void main() {
       repository.onUpload = (value) async => receiptFor(value, replayed: true);
       await tester.tap(key('openUploadButton'));
       await tester.pumpAndSettle();
-      expect(key('serialNumberField'), findsNothing);
+      expect(key('newSerialNumberField'), findsNothing);
       expect(repository.batches.last.id, batch.id);
       expect(drafts.items, isEmpty);
       expect(key('uploadSuccess'), findsOneWidget);
@@ -340,7 +341,7 @@ void main() {
     await gallery(tester);
     expect(repository.limitsCalls, 0);
     expect(repository.batches, isEmpty);
-    expect(key('serialNumberField'), findsNothing);
+    expect(key('newSerialNumberField'), findsNothing);
   });
 
   testWidgets('scrolling the review does not reopen a canceled serial prompt', (
@@ -359,7 +360,7 @@ void main() {
     await tester.drag(key('photoReviewList'), const Offset(0, 3000));
     await tester.pumpAndSettle();
     expect(key('uploadPhotosButton'), findsOneWidget);
-    expect(key('serialNumberField'), findsNothing);
+    expect(key('newSerialNumberField'), findsNothing);
     expect(repository.batches, isEmpty);
   });
 }

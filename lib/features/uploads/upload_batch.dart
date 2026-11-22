@@ -3,6 +3,8 @@ import 'package:uuid/uuid.dart';
 import '../../core/api/api_client.dart';
 import '../capture/photo_draft.dart';
 
+typedef UploadSerials = ({String oldSerialNumber, String newSerialNumber});
+
 class UploadLimits {
   const UploadLimits({
     required this.maxPhotos,
@@ -34,29 +36,39 @@ class UploadLimits {
   String? serialError(String value) {
     final serial = value.trim();
     return serial.isEmpty ||
-            serial.length > maxSerialNumberLength ||
-            RegExp(r'[\x00-\x1f\x7f-\x9f]').hasMatch(serial)
+        serial.length > maxSerialNumberLength ||
+        RegExp(r'[\x00-\x1f\x7f-\x9f]').hasMatch(serial)
         ? 'invalid_serial_number'
         : null;
   }
 }
 
 class UploadBatch {
-  UploadBatch._(this.id, this.serialNumber, List<PhotoDraft> photos)
-    : photos = List.unmodifiable(photos);
+  UploadBatch._(
+      this.id,
+      this.oldSerialNumber,
+      this.newSerialNumber,
+      List<PhotoDraft> photos,
+      ) : photos = List.unmodifiable(photos);
 
   final String id;
-  final String serialNumber;
+  final String oldSerialNumber;
+  final String newSerialNumber;
   final List<PhotoDraft> photos;
 
   factory UploadBatch.create({
-    required String serialNumber,
+    required String oldSerialNumber,
+    required String newSerialNumber,
     required List<PhotoDraft> photos,
     required UploadLimits limits,
     String Function()? newId,
   }) {
-    final serialError = limits.serialError(serialNumber);
-    if (serialError != null) throw ApiException(serialError);
+    if (limits.serialError(oldSerialNumber) != null) {
+      throw const ApiException('invalid_old_serial_number');
+    }
+    if (limits.serialError(newSerialNumber) != null) {
+      throw const ApiException('invalid_new_serial_number');
+    }
     if (photos.isEmpty) throw const ApiException('no_photos');
     if (photos.length > limits.maxPhotos) {
       throw const ApiException('too_many_photos');
@@ -84,12 +96,18 @@ class UploadBatch {
 
     final id = (newId ?? const Uuid().v4)();
     if (!_isId(id)) throw const ApiException('invalid_manifest');
-    return UploadBatch._(id, serialNumber.trim(), photos);
+    return UploadBatch._(
+      id,
+      oldSerialNumber.trim(),
+      newSerialNumber.trim(),
+      photos,
+    );
   }
 
   Map<String, dynamic> get manifest => {
     'id': id,
-    'serialNumber': serialNumber,
+    'oldSerialNumber': oldSerialNumber,
+    'newSerialNumber': newSerialNumber,
     'photos': [
       for (final photo in photos)
         {
@@ -105,17 +123,17 @@ class UploadBatch {
   };
 
   static bool _isId(String value) =>
-      RegExp(
-        r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$',
-      ).hasMatch(value) &&
-      value != '00000000-0000-0000-0000-000000000000';
+      RegExp(r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')
+          .hasMatch(value) &&
+          value != '00000000-0000-0000-0000-000000000000';
 }
 
 class UploadReceipt {
   UploadReceipt({
     required this.id,
     required this.clientUploadId,
-    required this.serialNumber,
+    required this.oldSerialNumber,
+    required this.newSerialNumber,
     required this.uploadedAtUtc,
     required this.replayed,
     required List<String> photoIds,
@@ -123,7 +141,8 @@ class UploadReceipt {
 
   final String id;
   final String clientUploadId;
-  final String serialNumber;
+  final String oldSerialNumber;
+  final String newSerialNumber;
   final DateTime uploadedAtUtc;
   final bool replayed;
   final List<String> photoIds;
@@ -133,7 +152,8 @@ class UploadReceipt {
   factory UploadReceipt.fromJson(Map<String, dynamic> json) {
     final id = json['id'];
     final clientId = json['clientUploadId'];
-    final serial = json['serialNumber'];
+    final oldSerial = json['oldSerialNumber'];
+    final newSerial = json['newSerialNumber'];
     final date = json['uploadedAtUtc'];
     final replayed = json['replayed'];
     final photos = json['photos'];
@@ -141,7 +161,10 @@ class UploadReceipt {
         !UploadBatch._isId(id) ||
         clientId is! String ||
         !UploadBatch._isId(clientId) ||
-        serial is! String ||
+        oldSerial is! String ||
+        oldSerial.trim().isEmpty ||
+        newSerial is! String ||
+        newSerial.trim().isEmpty ||
         date is! String ||
         replayed is! bool ||
         photos is! List) {
@@ -157,7 +180,8 @@ class UploadReceipt {
     return UploadReceipt(
       id: id,
       clientUploadId: clientId,
-      serialNumber: serial,
+      oldSerialNumber: oldSerial,
+      newSerialNumber: newSerial,
       uploadedAtUtc: DateTime.parse(date).toUtc(),
       replayed: replayed,
       photoIds: ids,
@@ -166,12 +190,13 @@ class UploadReceipt {
 
   bool confirms(UploadBatch batch) =>
       clientUploadId.toLowerCase() == batch.id.toLowerCase() &&
-      serialNumber == batch.serialNumber &&
-      photoIds.length == batch.photos.length &&
-      photoIds.map((id) => id.toLowerCase()).toSet().length ==
-          photoIds.length &&
-      photoIds
-          .map((id) => id.toLowerCase())
-          .toSet()
-          .containsAll(batch.photos.map((photo) => photo.id.toLowerCase()));
+          oldSerialNumber == batch.oldSerialNumber &&
+          newSerialNumber == batch.newSerialNumber &&
+          photoIds.length == batch.photos.length &&
+          photoIds.map((id) => id.toLowerCase()).toSet().length ==
+              photoIds.length &&
+          photoIds
+              .map((id) => id.toLowerCase())
+              .toSet()
+              .containsAll(batch.photos.map((photo) => photo.id.toLowerCase()));
 }

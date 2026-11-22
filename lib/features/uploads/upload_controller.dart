@@ -40,7 +40,10 @@ class UploadController extends ChangeNotifier {
     }
   }
 
-  Future<void> submit(String serialNumber) async {
+  Future<void> submit({
+    required String oldSerialNumber,
+    required String newSerialNumber,
+  }) async {
     if (_disposed || isUploading || isLoadingLimits || drafts.isCapturing) {
       return;
     }
@@ -53,7 +56,8 @@ class UploadController extends ChangeNotifier {
           throw const ApiException('service_unavailable');
         }
         pendingBatch = UploadBatch.create(
-          serialNumber: serialNumber,
+          oldSerialNumber: oldSerialNumber,
+          newSerialNumber: newSerialNumber,
           photos: drafts.items,
           limits: currentLimits,
         );

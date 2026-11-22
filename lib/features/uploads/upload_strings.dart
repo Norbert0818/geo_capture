@@ -10,7 +10,9 @@ class UploadStrings {
 
   String _text(String en, String ro) => romanian ? ro : en;
   String get upload => _text('Upload photos', 'Încarcă fotografiile');
-  String get serial => _text('Serial number', 'Număr de serie');
+  String get serial => _text('Serial numbers', 'Numere de serie');
+  String get oldSerial => _text('Old serial number', 'Număr de serie vechi');
+  String get newSerial => _text('New serial number', 'Număr de serie nou');
   String get cancel => _text('Cancel', 'Anulează');
   String get retry => _text('Retry upload', 'Reîncearcă încărcarea');
   String get loading =>
@@ -20,8 +22,8 @@ class UploadStrings {
       _text('Waiting for confirmation...', 'Se așteaptă confirmarea...');
   String get success => _text('Upload saved', 'Încărcare salvată');
   String get retryNotice => _text(
-    'The upload was not confirmed. Retry the same photos and serial number.',
-    'Încărcarea nu a fost confirmată. Reîncearcă aceleași fotografii și același număr de serie.',
+    'The upload was not confirmed. Retry the same photos and both serial numbers.',
+    'Încărcarea nu a fost confirmată. Reîncearcă aceleași fotografii și ambele numere de serie.',
   );
   String get notice => _text(
     'Photos stay on this device until the server confirms the upload. '
@@ -33,12 +35,20 @@ class UploadStrings {
     'Maximum $count photos per upload.',
     'Maximum $count fotografii per încărcare.',
   );
-  String saved(int count, String serial) => _text(
-    '$count photos saved. Serial number: $serial',
-    '$count fotografii salvate. Număr de serie: $serial',
+  String saved(int count, String oldSerial, String newSerial) => _text(
+    '$count photos saved. Old: $oldSerial. New: $newSerial',
+    '$count fotografii salvate. Vechi: $oldSerial. Nou: $newSerial',
   );
 
   String error(String code) => switch (code) {
+    'invalid_old_serial_number' => _text(
+      'Enter a valid old serial number within the allowed length.',
+      'Introdu un număr de serie vechi valid, în limita de lungime.',
+    ),
+    'invalid_new_serial_number' => _text(
+      'Enter a valid new serial number within the allowed length.',
+      'Introdu un număr de serie nou valid, în limita de lungime.',
+    ),
     'invalid_serial_number' => _text(
       'Enter a valid serial number within the allowed length.',
       'Introdu un număr de serie valid, în limita de lungime.',

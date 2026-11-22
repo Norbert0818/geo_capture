@@ -28,10 +28,10 @@ class UploadAdapter implements HttpClientAdapter {
 
   @override
   Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
+      RequestOptions options,
+      Stream<Uint8List>? requestStream,
+      Future<void>? cancelFuture,
+      ) async {
     requests.add(options);
     if (requestStream != null) {
       final bytes = BytesBuilder();
@@ -65,9 +65,10 @@ Matcher apiError(String code) =>
 void main() {
   test(
     'sends both image variants, per-photo GPS, UTC times and a serial as text',
-    () async {
+        () async {
       final batch = UploadBatch.create(
-        serialNumber: '  000123 / AB  ',
+        oldSerialNumber: 'OLD',
+        newSerialNumber: '  000123 / AB  ',
         photos: [photo(1), photo(2)],
         limits: limits,
       );
@@ -80,7 +81,7 @@ void main() {
       final (_, uploads) = repository(adapter);
       final receipt = await uploads.upload(batch);
 
-      expect(receipt.serialNumber, '000123 / AB');
+      expect(receipt.newSerialNumber, '000123 / AB');
       expect(receipt.photoCount, 2);
       expect(adapter.requests.map((r) => r.path), [
         '/api/auth/csrf',
@@ -92,8 +93,9 @@ void main() {
       final form = post.data as FormData;
       expect(form.fields.single.key, 'manifest');
       final manifest =
-          jsonDecode(form.fields.single.value) as Map<String, dynamic>;
-      expect(manifest['serialNumber'], '000123 / AB');
+      jsonDecode(form.fields.single.value) as Map<String, dynamic>;
+      expect(manifest['newSerialNumber'], '000123 / AB');
+      expect(manifest['oldSerialNumber'], 'OLD');
       expect(manifest.containsKey('ownerId'), isFalse);
       final metadata = manifest['photos'] as List;
       expect(metadata[0]['latitude'], batch.photos[0].location.latitude);
@@ -116,9 +118,10 @@ void main() {
 
   test(
     'retry keeps the batch ID but builds fresh multipart data and CSRF tokens',
-    () async {
+        () async {
       final batch = UploadBatch.create(
-        serialNumber: '0007',
+        oldSerialNumber: 'OLD',
+        newSerialNumber: '0007',
         photos: [photo(1)],
         limits: limits,
       );
@@ -146,10 +149,10 @@ void main() {
       expect(identical(writes[0].data, writes[1].data), isFalse);
       expect(
         (writes[0].data as FormData).fields.map(
-          (entry) => [entry.key, entry.value],
+              (entry) => [entry.key, entry.value],
         ),
         (writes[1].data as FormData).fields.map(
-          (entry) => [entry.key, entry.value],
+              (entry) => [entry.key, entry.value],
         ),
       );
       expect(adapter.bodies.length, 2);
@@ -163,12 +166,13 @@ void main() {
   ]) {
     test('preserves upload error ${entry.$2}', () async {
       final batch = UploadBatch.create(
-        serialNumber: 'X',
+        oldSerialNumber: 'OLD',
+        newSerialNumber: 'X',
         photos: [photo(1)],
         limits: limits,
       );
       final adapter = UploadAdapter(
-        (request) => request.path == '/api/auth/csrf'
+            (request) => request.path == '/api/auth/csrf'
             ? jsonBody({'token': 'csrf'})
             : jsonBody({'code': entry.$2}, status: entry.$1),
       );
@@ -179,7 +183,8 @@ void main() {
 
   test('missing CSRF prevents the multipart POST', () async {
     final batch = UploadBatch.create(
-      serialNumber: 'X',
+      oldSerialNumber: 'OLD',
+      newSerialNumber: 'X',
       photos: [photo(1)],
       limits: limits,
     );
@@ -194,7 +199,8 @@ void main() {
 
   test('a response for different photos cannot confirm this upload', () async {
     final batch = UploadBatch.create(
-      serialNumber: 'X',
+      oldSerialNumber: 'OLD',
+      newSerialNumber: 'X',
       photos: [photo(1)],
       limits: limits,
     );
@@ -212,14 +218,14 @@ void main() {
   test('reads server limits and rejects an expired session', () async {
     var expired = false;
     final adapter = UploadAdapter(
-      (_) => expired
+          (_) => expired
           ? jsonBody({}, status: 401)
           : jsonBody({
-              'maxPhotos': 3,
-              'maxSerialNumberLength': 17,
-              'maxFileBytes': 1000,
-              'maxBatchBytes': 5000,
-            }),
+        'maxPhotos': 3,
+        'maxSerialNumberLength': 17,
+        'maxFileBytes': 1000,
+        'maxBatchBytes': 5000,
+      }),
     );
     final (_, uploads) = repository(adapter);
     final value = await uploads.getLimits();

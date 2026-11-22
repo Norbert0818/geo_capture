@@ -7,6 +7,8 @@ import '../uploads/upload_controller.dart';
 import '../uploads/upload_strings.dart';
 import 'capture_error_message.dart';
 import 'capture_strings.dart';
+import 'camera_framing.dart';
+import 'framing_settings_sheet.dart';
 import 'photo_draft_store.dart';
 import 'photo_review_sheet.dart';
 
@@ -38,9 +40,44 @@ class CaptureView extends StatefulWidget {
 
 class _CaptureViewState extends State<CaptureView> {
   bool _reviewOpen = false;
+  bool _framingOpen = false;
+  CameraFraming _framing = const CameraFraming();
+
+  Future<void> _editFraming() async {
+    if (_framingOpen ||
+        _reviewOpen ||
+        widget.drafts.isCapturing ||
+        widget.uploads?.isUploading == true) {
+      return;
+    }
+    setState(() => _framingOpen = true);
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        barrierColor: Colors.transparent,
+        isDismissible: false,
+        enableDrag: false,
+        builder: (sheetContext) => ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * .7,
+          ),
+          child: FramingSettingsSheet(
+            initialValue: _framing,
+            onChanged: (value) {
+              if (mounted) setState(() => _framing = value);
+            },
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _framingOpen = false);
+    }
+  }
 
   Future<void> _reviewPhotos({bool promptForSerial = false}) async {
-    if (_reviewOpen || widget.drafts.isCapturing) return;
+    if (_reviewOpen || _framingOpen || widget.drafts.isCapturing) return;
     setState(() => _reviewOpen = true);
     try {
       await showModalBottomSheet<void>(
@@ -120,6 +157,7 @@ class _CaptureViewState extends State<CaptureView> {
                 !busy &&
                 !drafts.isLocked &&
                 !_reviewOpen &&
+                !_framingOpen &&
                 uploads?.isLoadingLimits != true;
         final latest = drafts.items.isEmpty ? null : drafts.items.last;
 
@@ -145,23 +183,7 @@ class _CaptureViewState extends State<CaptureView> {
                         ? widget.preview
                         : const ColoredBox(color: Colors.black),
                   ),
-                  const IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black54,
-                            Colors.transparent,
-                            Colors.transparent,
-                            Colors.black87,
-                          ],
-                          stops: [0, .25, .6, 1],
-                        ),
-                      ),
-                    ),
-                  ),
+                  CameraFramingOverlay(framing: _framing),
                   ControlSafeArea(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -207,6 +229,28 @@ class _CaptureViewState extends State<CaptureView> {
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton.filledTonal(
+                                        key: const ValueKey(
+                                          'cameraFramingButton',
+                                        ),
+                                        tooltip:
+                                        Localizations.localeOf(context)
+                                            .languageCode ==
+                                            'ro'
+                                            ? 'Încadrare cameră'
+                                            : 'Camera framing',
+                                        onPressed:
+                                        busy || _reviewOpen || _framingOpen
+                                            ? null
+                                            : _editFraming,
+                                        style: IconButton.styleFrom(
+                                          minimumSize: const Size(48, 48),
+                                          backgroundColor: Colors.black54,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        icon: const Icon(Icons.tune),
                                       ),
                                       const SizedBox(width: 8),
                                       DecoratedBox(

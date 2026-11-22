@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
 import 'history_strings.dart';
+import 'serial_numbers_view.dart';
 import 'upload_details_page.dart';
 import 'upload_history_models.dart';
 import 'upload_history_repository.dart';
@@ -109,161 +110,156 @@ class _UploadHistoryPageState extends State<UploadHistoryPage> {
             constraints: const BoxConstraints(maxWidth: 1100),
             child: _loading
                 ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 12),
-                        Text(t.loading),
-                      ],
-                    ),
-                  )
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 12),
+                  Text(t.loading),
+                ],
+              ),
+            )
                 : _error != null
                 ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            t.error(_error!),
-                            key: const ValueKey('historyError'),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          FilledButton(
-                            onPressed: () => _load(_requestedPage),
-                            child: Text(t.retry),
-                          ),
-                        ],
-                      ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      t.error(_error!),
+                      key: const ValueKey('historyError'),
+                      textAlign: TextAlign.center,
                     ),
-                  )
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => _load(_requestedPage),
+                      child: Text(t.retry),
+                    ),
+                  ],
+                ),
+              ),
+            )
                 : data == null
                 ? const SizedBox.shrink()
                 : Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                t.uploads(data.total),
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(t.readOnly),
-                              Text(t.localTimes),
-                            ],
-                          ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t.uploads(data.total),
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
+                        const SizedBox(height: 4),
+                        Text(t.readOnly),
+                        Text(t.localTimes),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: data.items.isEmpty
+                      ? Center(
+                    child: Text(
+                      t.empty,
+                      key: const ValueKey('historyEmpty'),
+                    ),
+                  )
+                      : RefreshIndicator(
+                    onRefresh: () => _load(data.page),
+                    child: ListView.builder(
+                      key: ValueKey('historyPage:${data.page}'),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
                       ),
-                      Expanded(
-                        child: data.items.isEmpty
-                            ? Center(
-                                child: Text(
-                                  t.empty,
-                                  key: const ValueKey('historyEmpty'),
-                                ),
-                              )
-                            : RefreshIndicator(
-                                onRefresh: () => _load(data.page),
-                                child: ListView.builder(
-                                  key: ValueKey('historyPage:${data.page}'),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
+                      physics:
+                      const AlwaysScrollableScrollPhysics(),
+                      itemCount: data.items.length,
+                      itemBuilder: (context, index) {
+                        final item = data.items[index];
+                        return Card(
+                          child: InkWell(
+                            key: ValueKey('upload:${item.id}'),
+                            onTap: () => _open(item),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                                children: [
+                                  SerialNumbersView(summary: item),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${t.uploadedBy}: ${item.uploadedByUsername}',
                                   ),
-                                  physics:
-                                      const AlwaysScrollableScrollPhysics(),
-                                  itemCount: data.items.length,
-                                  itemBuilder: (context, index) {
-                                    final item = data.items[index];
-                                    return Card(
-                                      child: InkWell(
-                                        key: ValueKey('upload:${item.id}'),
-                                        onTap: () => _open(item),
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(16),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                item.serialNumber,
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.titleLarge,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                '${t.uploadedBy}: ${item.uploadedByUsername}',
-                                              ),
-                                              Text(
-                                                '${t.uploadedAt}: ${t.date(item.uploadedAtUtc)}',
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                children: [
-                                                  const Icon(
-                                                    Icons
-                                                        .photo_library_outlined,
-                                                    size: 20,
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(
-                                                    child: Text(
-                                                      t.photos(item.photoCount),
-                                                    ),
-                                                  ),
-                                                  const Icon(
-                                                    Icons.chevron_right,
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
+                                  Text(
+                                    '${t.uploadedAt}: ${t.date(item.uploadedAtUtc)}',
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons
+                                            .photo_library_outlined,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          t.photos(item.photoCount),
                                         ),
                                       ),
-                                    );
-                                  },
-                                ),
+                                      const Icon(
+                                        Icons.chevron_right,
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        key: const ValueKey('previousHistoryPage'),
+                        tooltip: t.previous,
+                        onPressed: data.hasPrevious
+                            ? () => _load(data.page - 1)
+                            : null,
+                        icon: const Icon(Icons.chevron_left),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              key: const ValueKey('previousHistoryPage'),
-                              tooltip: t.previous,
-                              onPressed: data.hasPrevious
-                                  ? () => _load(data.page - 1)
-                                  : null,
-                              icon: const Icon(Icons.chevron_left),
-                            ),
-                            Expanded(
-                              child: Text(
-                                t.page(data.page, data.totalPages),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            IconButton(
-                              key: const ValueKey('nextHistoryPage'),
-                              tooltip: t.next,
-                              onPressed: data.hasNext
-                                  ? () => _load(data.page + 1)
-                                  : null,
-                              icon: const Icon(Icons.chevron_right),
-                            ),
-                          ],
+                      Expanded(
+                        child: Text(
+                          t.page(data.page, data.totalPages),
+                          textAlign: TextAlign.center,
                         ),
+                      ),
+                      IconButton(
+                        key: const ValueKey('nextHistoryPage'),
+                        tooltip: t.next,
+                        onPressed: data.hasNext
+                            ? () => _load(data.page + 1)
+                            : null,
+                        icon: const Icon(Icons.chevron_right),
                       ),
                     ],
                   ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

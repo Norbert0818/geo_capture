@@ -47,18 +47,26 @@ class _UploadPanelState extends State<UploadPanel>
     }
     final pending = controller.pendingBatch;
     if (pending != null) {
-      await controller.submit(pending.serialNumber);
+      await controller.submit(
+        oldSerialNumber: pending.oldSerialNumber,
+        newSerialNumber: pending.newSerialNumber,
+      );
       return;
     }
     setState(() => _dialogOpen = true);
     try {
       if (controller.limits == null) await controller.loadLimits();
       if (!mounted || controller.limits == null) return;
-      final serial = await showDialog<String>(
+      final serial = await showDialog<UploadSerials>(
         context: context,
         builder: (_) => SerialNumberDialog(limits: controller.limits!),
       );
-      if (mounted && serial != null) await controller.submit(serial);
+      if (mounted && serial != null) {
+        await controller.submit(
+          oldSerialNumber: serial.oldSerialNumber,
+          newSerialNumber: serial.newSerialNumber,
+        );
+      }
     } finally {
       if (mounted) setState(() => _dialogOpen = false);
     }
@@ -93,7 +101,8 @@ class _UploadPanelState extends State<UploadPanel>
                 if (pending != null && !busy) ...[
                   const SizedBox(height: 12),
                   Text(t.retryNotice),
-                  Text('${t.serial}: ${pending.serialNumber}'),
+                  Text('${t.oldSerial}: ${pending.oldSerialNumber}'),
+                  Text('${t.newSerial}: ${pending.newSerialNumber}'),
                 ],
                 if (controller.errorCode != null) ...[
                   const SizedBox(height: 12),
@@ -113,7 +122,11 @@ class _UploadPanelState extends State<UploadPanel>
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   Text(
-                    t.saved(receipt.photoCount, receipt.serialNumber),
+                    t.saved(
+                      receipt.photoCount,
+                      receipt.oldSerialNumber,
+                      receipt.newSerialNumber,
+                    ),
                     key: const ValueKey('uploadSuccess'),
                   ),
                   SelectableText(receipt.id),
@@ -170,18 +183,23 @@ class SerialNumberDialog extends StatefulWidget {
 
 class _SerialNumberDialogState extends State<SerialNumberDialog> {
   final _form = GlobalKey<FormState>();
-  final _serial = TextEditingController();
+  final _oldSerial = TextEditingController();
+  final _newSerial = TextEditingController();
   bool _submitted = false;
 
   void _submit() {
     if (_submitted || !_form.currentState!.validate()) return;
     _submitted = true;
-    Navigator.of(context).pop(_serial.text.trim());
+    Navigator.of(context).pop((
+    oldSerialNumber: _oldSerial.text.trim(),
+    newSerialNumber: _newSerial.text.trim(),
+    ));
   }
 
   @override
   void dispose() {
-    _serial.dispose();
+    _oldSerial.dispose();
+    _newSerial.dispose();
     super.dispose();
   }
 
@@ -196,20 +214,41 @@ class _SerialNumberDialogState extends State<SerialNumberDialog> {
         width: 360,
         child: Form(
           key: _form,
-          child: TextFormField(
-            key: const ValueKey('serialNumberField'),
-            controller: _serial,
-            autofocus: true,
-            maxLength: widget.limits.maxSerialNumberLength,
-            textInputAction: TextInputAction.done,
-            textCapitalization: TextCapitalization.none,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: InputDecoration(labelText: t.serial),
-            validator: (value) => widget.limits.serialError(value ?? '') == null
-                ? null
-                : t.error('invalid_serial_number'),
-            onFieldSubmitted: (_) => _submit(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                key: const ValueKey('oldSerialNumberField'),
+                controller: _oldSerial,
+                autofocus: true,
+                maxLength: widget.limits.maxSerialNumberLength,
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.none,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: InputDecoration(labelText: t.oldSerial),
+                validator: (value) =>
+                widget.limits.serialError(value ?? '') == null
+                    ? null
+                    : t.error('invalid_old_serial_number'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: const ValueKey('newSerialNumberField'),
+                controller: _newSerial,
+                maxLength: widget.limits.maxSerialNumberLength,
+                textInputAction: TextInputAction.done,
+                textCapitalization: TextCapitalization.none,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: InputDecoration(labelText: t.newSerial),
+                validator: (value) =>
+                widget.limits.serialError(value ?? '') == null
+                    ? null
+                    : t.error('invalid_new_serial_number'),
+                onFieldSubmitted: (_) => _submit(),
+              ),
+            ],
           ),
         ),
       ),

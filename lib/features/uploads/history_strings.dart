@@ -20,6 +20,12 @@ class HistoryStrings {
   String get previous => _text('Previous page', 'Pagina anterioară');
   String get next => _text('Next page', 'Pagina următoare');
   String get serial => _text('Serial number', 'Număr de serie');
+  String get oldSerial => _text('Old serial number', 'Număr de serie vechi');
+  String get newSerial => _text('New serial number', 'Număr de serie nou');
+  String get legacySerial => _text(
+    'Recorded serial number (older upload)',
+    'Număr de serie înregistrat (încărcare anterioară)',
+  );
   String get uploadedBy => _text('Uploaded by', 'Încărcat de');
   String get uploadedAt => _text('Uploaded at', 'Încărcat la');
   String get capturedAt => _text('Captured at', 'Fotografiat la');

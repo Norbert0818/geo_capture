@@ -241,10 +241,11 @@ void main() {
       );
       await tester.tap(key('openUploadButton'));
       await tester.pumpAndSettle();
-      expect(key('serialNumberField'), findsOneWidget);
-      await tester.ensureVisible(key('serialNumberField'));
+      expect(key('newSerialNumberField'), findsOneWidget);
+      await tester.ensureVisible(key('newSerialNumberField'));
       await tester.pumpAndSettle();
-      await tester.enterText(key('serialNumberField'), '00042');
+      await tester.enterText(key('oldSerialNumberField'), 'OLD');
+      await tester.enterText(key('newSerialNumberField'), '00042');
       final confirm = key('confirmUploadButton');
       expect(
         tester.getRect(confirm).bottom,
@@ -252,7 +253,7 @@ void main() {
       );
       await tester.tap(confirm);
       await tester.pumpAndSettle();
-      expect(repository.batches.single.serialNumber, '00042');
+      expect(repository.batches.single.newSerialNumber, '00042');
       expect(drafts.items, isEmpty);
       expect(tester.takeException(), isNull);
     });

@@ -59,12 +59,12 @@ void main() {
   });
 
   testWidgets('canceling the serial dialog does not upload or remove photos', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     await drafts.capture(() async => photo(1));
     await start(tester);
     await open(tester);
-    expect(key('serialNumberField'), findsOneWidget);
+    expect(key('newSerialNumberField'), findsOneWidget);
     await tester.tap(key('cancelUploadButton'));
     await tester.pumpAndSettle();
     expect(repository.batches, isEmpty);
@@ -73,18 +73,19 @@ void main() {
 
   testWidgets(
     'empty serial stays in the dialog and a valid serial keeps zeros',
-    (tester) async {
+        (tester) async {
       await drafts.capture(() async => photo(1));
       await start(tester);
       await open(tester);
       await tester.tap(key('confirmUploadButton'));
       await tester.pumpAndSettle();
-      expect(key('serialNumberField'), findsOneWidget);
+      expect(key('newSerialNumberField'), findsOneWidget);
       expect(repository.batches, isEmpty);
-      await tester.enterText(key('serialNumberField'), '000123');
+      await tester.enterText(key('oldSerialNumberField'), 'OLD');
+      await tester.enterText(key('newSerialNumberField'), '000123');
       await tester.tap(key('confirmUploadButton'));
       await tester.pumpAndSettle();
-      expect(repository.batches.single.serialNumber, '000123');
+      expect(repository.batches.single.newSerialNumber, '000123');
       expect(key('uploadSuccess'), findsOneWidget);
       expect(drafts.items, isEmpty);
     },
@@ -92,13 +93,14 @@ void main() {
 
   testWidgets(
     'Romanian dialog and success message follow the selected locale',
-    (tester) async {
+        (tester) async {
       await drafts.capture(() async => photo(1));
       await start(tester, language: 'ro');
       expect(find.text('Încarcă fotografiile'), findsOneWidget);
       await open(tester);
       expect(find.text('Anulează'), findsOneWidget);
-      await tester.enterText(key('serialNumberField'), 'RO-001');
+      await tester.enterText(key('oldSerialNumberField'), 'OLD');
+      await tester.enterText(key('newSerialNumberField'), 'RO-001');
       await tester.tap(key('confirmUploadButton'));
       await tester.pumpAndSettle();
       expect(find.text('Încărcare salvată'), findsOneWidget);
@@ -106,14 +108,15 @@ void main() {
   );
 
   testWidgets('failure retries without opening another serial dialog', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     await drafts.capture(() async => photo(1));
     repository.onUpload = (_) async =>
-        throw const ApiException('service_unavailable');
+    throw const ApiException('service_unavailable');
     await start(tester);
     await open(tester);
-    await tester.enterText(key('serialNumberField'), 'A-0001');
+    await tester.enterText(key('oldSerialNumberField'), 'OLD');
+    await tester.enterText(key('newSerialNumberField'), 'A-0001');
     await tester.tap(key('confirmUploadButton'));
     await tester.pumpAndSettle();
     expect(key('uploadError'), findsOneWidget);
@@ -122,20 +125,21 @@ void main() {
     repository.onUpload = (batch) async => receiptFor(batch, replayed: true);
     await tester.tap(key('uploadPhotosButton'));
     await tester.pumpAndSettle();
-    expect(key('serialNumberField'), findsNothing);
+    expect(key('newSerialNumberField'), findsNothing);
     expect(repository.batches.last.id, first.id);
     expect(key('uploadSuccess'), findsOneWidget);
   });
 
   testWidgets('waiting for server confirmation does not show success', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     await drafts.capture(() async => photo(1));
     final result = Completer<UploadReceipt>();
     repository.onUpload = (_) => result.future;
     await start(tester);
     await open(tester);
-    await tester.enterText(key('serialNumberField'), 'A');
+    await tester.enterText(key('oldSerialNumberField'), 'OLD');
+    await tester.enterText(key('newSerialNumberField'), 'A');
     await tester.tap(key('confirmUploadButton'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));

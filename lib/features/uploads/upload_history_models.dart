@@ -1,8 +1,7 @@
 bool isUploadId(String value) =>
-    RegExp(
-      r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$',
-    ).hasMatch(value) &&
-    value != '00000000-0000-0000-0000-000000000000';
+    RegExp(r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$')
+        .hasMatch(value) &&
+        value != '00000000-0000-0000-0000-000000000000';
 
 String _text(Map<String, dynamic> json, String key) {
   final value = json[key];
@@ -55,28 +54,48 @@ class UploadHistoryItem {
     required this.uploadedAtUtc,
     required this.photoCount,
     required this.version,
+    this.oldSerialNumber,
+    this.newSerialNumber,
   });
 
   final String id;
   final String clientUploadId;
   final String serialNumber;
+  final String? oldSerialNumber;
+  final String? newSerialNumber;
+  bool get hasSerialPair => oldSerialNumber != null && newSerialNumber != null;
   final String ownerId;
   final String uploadedByUsername;
   final DateTime uploadedAtUtc;
   final int photoCount;
   final String version;
 
-  factory UploadHistoryItem.fromJson(Map<String, dynamic> json) =>
-      UploadHistoryItem(
-        id: _id(json, 'id'),
-        clientUploadId: _id(json, 'clientUploadId'),
-        serialNumber: _text(json, 'serialNumber'),
-        ownerId: _id(json, 'ownerId'),
-        uploadedByUsername: _text(json, 'uploadedByUsername'),
-        uploadedAtUtc: _date(json, 'uploadedAtUtc'),
-        photoCount: _integer(json, 'photoCount', minimum: 1),
-        version: _id(json, 'version'),
-      );
+  factory UploadHistoryItem.fromJson(Map<String, dynamic> json) {
+    final oldSerial = json['oldSerialNumber'];
+    final newSerial = json['newSerialNumber'];
+    final serial = _text(json, 'serialNumber');
+    if (oldSerial != null || newSerial != null) {
+      if (oldSerial is! String ||
+          oldSerial.isEmpty ||
+          newSerial is! String ||
+          newSerial.isEmpty ||
+          newSerial != serial) {
+        throw const FormatException();
+      }
+    }
+    return UploadHistoryItem(
+      id: _id(json, 'id'),
+      clientUploadId: _id(json, 'clientUploadId'),
+      serialNumber: serial,
+      oldSerialNumber: oldSerial as String?,
+      newSerialNumber: newSerial as String?,
+      ownerId: _id(json, 'ownerId'),
+      uploadedByUsername: _text(json, 'uploadedByUsername'),
+      uploadedAtUtc: _date(json, 'uploadedAtUtc'),
+      photoCount: _integer(json, 'photoCount', minimum: 1),
+      version: _id(json, 'version'),
+    );
+  }
 }
 
 class UploadHistoryResult {
@@ -170,7 +189,7 @@ class StoredPhoto {
 
 class StoredUpload {
   StoredUpload({required this.summary, required List<StoredPhoto> photos})
-    : photos = List.unmodifiable(photos);
+      : photos = List.unmodifiable(photos);
 
   final UploadHistoryItem summary;
   final List<StoredPhoto> photos;

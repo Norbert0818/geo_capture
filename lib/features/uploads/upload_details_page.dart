@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
 import 'history_strings.dart';
+import 'serial_numbers_view.dart';
 import 'upload_history_models.dart';
 import 'upload_history_repository.dart';
 import 'uploaded_photo_page.dart';
@@ -102,105 +103,102 @@ class _UploadDetailsPageState extends State<UploadDetailsPage> {
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
                 ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            t.error(_error!),
-                            key: const ValueKey('detailsError'),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          FilledButton(onPressed: _load, child: Text(t.retry)),
-                        ],
-                      ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      t.error(_error!),
+                      key: const ValueKey('detailsError'),
+                      textAlign: TextAlign.center,
                     ),
-                  )
+                    const SizedBox(height: 16),
+                    FilledButton(onPressed: _load, child: Text(t.retry)),
+                  ],
+                ),
+              ),
+            )
                 : upload == null
                 ? const SizedBox.shrink()
                 : ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      Text(
-                        upload.summary.serialNumber,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '${t.uploadedBy}: ${upload.summary.uploadedByUsername}',
-                      ),
-                      Text(
-                        '${t.uploadedAt}: ${t.date(upload.summary.uploadedAtUtc)}',
-                      ),
-                      Text(t.photos(upload.photos.length)),
-                      const SizedBox(height: 12),
-                      Text(t.readOnly),
-                      Text(t.localTimes),
-                      const SizedBox(height: 20),
-                      for (final photo in upload.photos)
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  t.photo(photo.position + 1),
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                                const SizedBox(height: 12),
-                                SelectableText(
-                                  photo.coordinatesText,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${t.accuracy}: ${photo.accuracyMeters.toStringAsFixed(1)} m',
-                                ),
-                                Text(
-                                  '${t.capturedAt}: ${t.date(photo.capturedAtUtc)}',
-                                ),
-                                Text(
-                                  '${t.measuredAt}: ${t.date(photo.locationMeasuredAtUtc)}',
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${t.original}: ${photo.originalWidth} × ${photo.originalHeight} · ${t.size(photo.originalByteLength)}',
-                                ),
-                                Text(
-                                  '${t.stamped}: ${photo.stampedWidth} × ${photo.stampedHeight} · ${t.size(photo.stampedByteLength)}',
-                                ),
-                                const SizedBox(height: 16),
-                                Wrap(
-                                  spacing: 12,
-                                  runSpacing: 8,
-                                  children: [
-                                    FilledButton.tonalIcon(
-                                      key: ValueKey('stamped:${photo.id}'),
-                                      onPressed: () => _open(photo, false),
-                                      icon: const Icon(
-                                        Icons.location_on_outlined,
-                                      ),
-                                      label: Text(t.stamped),
-                                    ),
-                                    OutlinedButton.icon(
-                                      key: ValueKey('original:${photo.id}'),
-                                      onPressed: () => _open(photo, true),
-                                      icon: const Icon(Icons.image_outlined),
-                                      label: Text(t.original),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+              padding: const EdgeInsets.all(16),
+              children: [
+                SerialNumbersView(summary: upload.summary),
+                const SizedBox(height: 12),
+                Text(
+                  '${t.uploadedBy}: ${upload.summary.uploadedByUsername}',
+                ),
+                Text(
+                  '${t.uploadedAt}: ${t.date(upload.summary.uploadedAtUtc)}',
+                ),
+                Text(t.photos(upload.photos.length)),
+                const SizedBox(height: 12),
+                Text(t.readOnly),
+                Text(t.localTimes),
+                const SizedBox(height: 20),
+                for (final photo in upload.photos)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t.photo(photo.position + 1),
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
-                        ),
-                    ],
+                          const SizedBox(height: 12),
+                          SelectableText(
+                            photo.coordinatesText,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${t.accuracy}: ${photo.accuracyMeters.toStringAsFixed(1)} m',
+                          ),
+                          Text(
+                            '${t.capturedAt}: ${t.date(photo.capturedAtUtc)}',
+                          ),
+                          Text(
+                            '${t.measuredAt}: ${t.date(photo.locationMeasuredAtUtc)}',
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${t.original}: ${photo.originalWidth} × ${photo.originalHeight} · ${t.size(photo.originalByteLength)}',
+                          ),
+                          Text(
+                            '${t.stamped}: ${photo.stampedWidth} × ${photo.stampedHeight} · ${t.size(photo.stampedByteLength)}',
+                          ),
+                          const SizedBox(height: 16),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              FilledButton.tonalIcon(
+                                key: ValueKey('stamped:${photo.id}'),
+                                onPressed: () => _open(photo, false),
+                                icon: const Icon(
+                                  Icons.location_on_outlined,
+                                ),
+                                label: Text(t.stamped),
+                              ),
+                              OutlinedButton.icon(
+                                key: ValueKey('original:${photo.id}'),
+                                onPressed: () => _open(photo, true),
+                                icon: const Icon(Icons.image_outlined),
+                                label: Text(t.original),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
+              ],
+            ),
           ),
         ),
       ),
