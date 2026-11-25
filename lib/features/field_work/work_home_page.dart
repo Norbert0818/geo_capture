@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/models/session_user.dart';
@@ -12,11 +13,17 @@ import 'work_qr_page.dart';
 import 'work_repository.dart';
 import 'work_storage.dart';
 import 'work_strings.dart';
+import 'work_file_share.dart';
 
 class FieldWorkServices {
-  const FieldWorkServices({required this.repository, required this.storage});
+  const FieldWorkServices({
+    required this.repository,
+    required this.storage,
+    this.shareFile,
+  });
   final WorkRepository repository;
   final SembastWorkStorage storage;
+  final WorkFileShare? shareFile;
 }
 
 class WorkHomePage extends StatefulWidget {
@@ -43,10 +50,52 @@ class _WorkHomePageState extends State<WorkHomePage> {
   int _page = 1, _total = 0, _loadId = 0;
   WorkListFilters _filters = const WorkListFilters();
   String? _error;
+  bool _exportingCsv = false;
+  CancelToken? _exportCancel;
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _exportCancel?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _exportCsv(BuildContext anchor) async {
+    final repository = _repository;
+    if (_exportingCsv || repository is! WorkExportRepository) return;
+    final s = WorkStrings.of(context);
+    final cancellation = CancelToken();
+    _exportCancel = cancellation;
+    final all = _all;
+    final filters = _filters;
+    setState(() => _exportingCsv = true);
+    try {
+      final bytes = await (repository as WorkExportRepository).exportCsv(
+        all: all,
+        filters: filters,
+        cancelToken: cancellation,
+      );
+      if (!mounted || !anchor.mounted) return;
+      await (widget.services.shareFile ?? shareWorkFile)(
+        anchor,
+        bytes,
+        workCsvFilename(DateTime.now()),
+        'text/csv',
+      );
+    } catch (error) {
+      if (mounted && !cancellation.isCancelled) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(s.error(error.toString()))));
+      }
+    } finally {
+      if (identical(_exportCancel, cancellation)) _exportCancel = null;
+      if (mounted) setState(() => _exportingCsv = false);
+    }
   }
 
   bool _current(int id) => mounted && id == _loadId;
@@ -181,6 +230,7 @@ class _WorkHomePageState extends State<WorkHomePage> {
         builder: (_) => WorkDetailsPage(
           id: id,
           repository: _repository,
+          shareFile: widget.services.shareFile,
           onEdit: (details) async {
             final existing = _drafts.where((draft) => draft.id == id);
             await _edit(
@@ -380,6 +430,28 @@ class _WorkHomePageState extends State<WorkHomePage> {
                 key: const ValueKey('workResultCount'),
               ),
             ),
+            if (_repository is WorkExportRepository)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Builder(
+                  builder: (anchor) => OutlinedButton.icon(
+                    key: const ValueKey('exportWorkCsv'),
+                    onPressed: _loading || _exportingCsv
+                        ? null
+                        : () => _exportCsv(anchor),
+                    icon: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: _exportingCsv
+                          ? const CircularProgressIndicator(strokeWidth: 2)
+                          : const Icon(Icons.table_view_outlined, size: 20),
+                    ),
+                    label: Text(
+                      s.text('Export filtered CSV', 'Exportă CSV filtrat'),
+                    ),
+                  ),
+                ),
+              ),
             for (final item in _items)
               Card(
                 child: ListTile(
@@ -445,16 +517,60 @@ class WorkDetailsPage extends StatefulWidget {
     required this.id,
     required this.repository,
     required this.onEdit,
+    this.shareFile,
   });
   final String id;
   final WorkRepository repository;
   final Future<void> Function(WorkDetails) onEdit;
+  final WorkFileShare? shareFile;
   @override
   State<WorkDetailsPage> createState() => _WorkDetailsPageState();
 }
 
 class _WorkDetailsPageState extends State<WorkDetailsPage> {
   late Future<WorkDetails> _details = widget.repository.details(widget.id);
+  final _zipBusy = ValueNotifier<bool>(false);
+  bool get _exportingZip => _zipBusy.value;
+  CancelToken? _exportCancel;
+  @override
+  void dispose() {
+    _exportCancel?.cancel();
+    _zipBusy.dispose();
+    super.dispose();
+  }
+
+  Future<void> _exportZip(BuildContext anchor, int revision) async {
+    final repository = widget.repository;
+    if (_exportingZip || repository is! WorkExportRepository) return;
+    final s = WorkStrings.of(context);
+    final cancellation = CancelToken();
+    _exportCancel = cancellation;
+    _zipBusy.value = true;
+    try {
+      final bytes = await (repository as WorkExportRepository).exportZip(
+        widget.id,
+        revision: revision,
+        cancelToken: cancellation,
+      );
+      if (!mounted || !anchor.mounted) return;
+      await (widget.shareFile ?? shareWorkFile)(
+        anchor,
+        bytes,
+        workZipFilename(widget.id, revision),
+        'application/zip',
+      );
+    } catch (error) {
+      if (mounted && !cancellation.isCancelled) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(s.error(error.toString()))));
+      }
+    } finally {
+      if (identical(_exportCancel, cancellation)) _exportCancel = null;
+      if (mounted) _zipBusy.value = false;
+    }
+  }
+
   Future<void> _history() async {
     final s = WorkStrings.of(context);
     try {
@@ -489,6 +605,8 @@ class _WorkDetailsPageState extends State<WorkDetailsPage> {
                                       .map((value) => s.change(value as String))
                                       .join(', '),
                                 ),
+                                if (widget.repository is WorkExportRepository)
+                                  _zipButton(s, item['revision'] as int),
                                 _document(
                                   WorkDocument.fromJson(
                                     Map<String, dynamic>.from(
@@ -516,6 +634,25 @@ class _WorkDetailsPageState extends State<WorkDetailsPage> {
       }
     }
   }
+
+  Widget _zipButton(WorkStrings s, int revision) =>
+      ValueListenableBuilder<bool>(
+        valueListenable: _zipBusy,
+        builder: (context, busy, _) => Builder(
+          builder: (anchor) => OutlinedButton.icon(
+            key: ValueKey('exportWorkZip:$revision'),
+            onPressed: busy ? null : () => _exportZip(anchor, revision),
+            icon: SizedBox(
+              width: 20,
+              height: 20,
+              child: busy
+                  ? const CircularProgressIndicator(strokeWidth: 2)
+                  : const Icon(Icons.folder_zip_outlined, size: 20),
+            ),
+            label: Text('${s.text('Export ZIP', 'Exportă ZIP')} · v$revision'),
+          ),
+        ),
+      );
 
   Widget _document(WorkDocument doc) {
     final s = WorkStrings.of(context);
@@ -619,6 +756,9 @@ class _WorkDetailsPageState extends State<WorkDetailsPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                if (widget.repository is WorkExportRepository)
+                  _zipButton(s, work.revision),
+                const SizedBox(height: 12),
                 _document(work.document),
               ],
             );

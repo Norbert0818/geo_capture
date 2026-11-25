@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
@@ -77,6 +78,43 @@ class ApiClient {
     }
   }
 
+  Future<Uint8List> getFile(
+      String path, {
+        required String mimeType,
+        Map<String, dynamic>? queryParameters,
+        CancelToken? cancelToken,
+        int maxBytes = 64 * 1024 * 1024,
+      }) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        path,
+        queryParameters: queryParameters,
+        cancelToken: cancelToken,
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': mimeType},
+          receiveTimeout: const Duration(minutes: 2),
+        ),
+      );
+      final bytes = response.data;
+      final receivedType = response.headers
+          .value(Headers.contentTypeHeader)
+          ?.split(';')
+          .first
+          .trim()
+          .toLowerCase();
+      if (bytes == null || bytes.isEmpty || receivedType != mimeType) {
+        throw const ApiException('service_unavailable');
+      }
+      if (bytes.length > maxBytes) {
+        throw const ApiException('work_export_too_large');
+      }
+      return Uint8List.fromList(bytes);
+    } on DioException catch (error) {
+      throw _mapError(error, path);
+    }
+  }
+
   Future<Map<String, dynamic>> post(
       String path,
       Map<String, dynamic> body,
@@ -146,7 +184,14 @@ class ApiClient {
 
   ApiException _mapError(DioException error, String path) {
     final status = error.response?.statusCode;
-    final data = error.response?.data;
+    dynamic data = error.response?.data;
+    if (data is List<int>) {
+      try {
+        data = jsonDecode(utf8.decode(data));
+      } on FormatException {
+        data = null;
+      }
+    }
 
     if (error.type == DioExceptionType.cancel) {
       return const ApiException('request_cancelled');

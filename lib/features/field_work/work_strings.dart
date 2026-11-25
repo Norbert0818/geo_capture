@@ -24,6 +24,30 @@ class WorkStrings {
   };
   String error(String? code) {
     if (code == null) return '';
+    if (code.contains('work_export_too_many')) {
+      return text(
+        'The export is limited to 1,000 work records. Narrow the search filters and retry.',
+        'Exportul este limitat la 1.000 de lucrări. Restrânge filtrele și reîncearcă.',
+      );
+    }
+    if (code.contains('work_export_too_large')) {
+      return text(
+        'This export exceeds the size limit.',
+        'Exportul depășește limita de dimensiune.',
+      );
+    }
+    if (code.contains('work_export_invalid_revision')) {
+      return text(
+        'Open an existing saved version and retry the export.',
+        'Deschide o versiune salvată existentă și reîncearcă exportul.',
+      );
+    }
+    if (code.contains('not_found')) {
+      return text(
+        'This work or saved version is unavailable.',
+        'Lucrarea sau versiunea salvată nu este disponibilă.',
+      );
+    }
     if (code.contains('work_conflict') ||
         code.contains('work_local_conflict')) {
       return text(

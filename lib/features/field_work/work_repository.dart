@@ -29,7 +29,21 @@ abstract interface class FilteredWorkRepository implements WorkRepository {
   });
 }
 
-class HttpWorkRepository implements FilteredWorkRepository {
+abstract interface class WorkExportRepository {
+  Future<Uint8List> exportCsv({
+    bool all = false,
+    WorkListFilters filters = const WorkListFilters(),
+    CancelToken? cancelToken,
+  });
+  Future<Uint8List> exportZip(
+      String id, {
+        required int revision,
+        CancelToken? cancelToken,
+      });
+}
+
+class HttpWorkRepository
+    implements FilteredWorkRepository, WorkExportRepository {
   const HttpWorkRepository(this.api);
   final ApiClient api;
   static const root = '/api/field-work';
@@ -58,6 +72,29 @@ class HttpWorkRepository implements FilteredWorkRepository {
     root,
     queryParameters: {'all': all, 'page': page, ...filters.toQueryParameters()},
   );
+  @override
+  Future<Uint8List> exportCsv({
+    bool all = false,
+    WorkListFilters filters = const WorkListFilters(),
+    CancelToken? cancelToken,
+  }) => api.getFile(
+    '$root/export.csv',
+    mimeType: 'text/csv',
+    cancelToken: cancelToken,
+    queryParameters: {'all': all, ...filters.toQueryParameters()},
+  );
+  @override
+  Future<Uint8List> exportZip(
+      String id, {
+        required int revision,
+        CancelToken? cancelToken,
+      }) => api.getFile(
+    '$root/$id/export.zip',
+    mimeType: 'application/zip',
+    cancelToken: cancelToken,
+    queryParameters: {'revision': revision},
+  );
+
   @override
   Future<WorkDetails> details(String id) async =>
       WorkDetails.fromJson(await api.get('$root/$id'));
