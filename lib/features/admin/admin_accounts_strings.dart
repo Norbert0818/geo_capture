@@ -34,7 +34,7 @@ class AdminAccountsStrings {
   String get tempPassword => _t('Temporary password', 'Parolă temporară');
   String get newTemp => _t('New temporary password', 'Parolă temporară nouă');
   String get credentials => _t('Account credentials', 'Date de autentificare');
-  String get copy => _t('Copy credentials', 'Copiază datele');
+  String get copy => _t('Copy temporary password', 'Copiază parola temporară');
   String get copied => _t('Copied', 'Copiat');
   String get done => _t('I saved the credentials', 'Am salvat datele');
   String get secretNotice => _t(
@@ -52,9 +52,9 @@ class AdminAccountsStrings {
   String confirmStatus(String name, bool active) => active
       ? _t('Enable $name?', 'Activezi $name?')
       : _t(
-          'Disable $name? Existing sessions will stop working.',
-          'Dezactivezi $name? Sesiunile existente nu vor mai funcționa.',
-        );
+    'Disable $name? Existing sessions will stop working.',
+    'Dezactivezi $name? Sesiunile existente nu vor mai funcționa.',
+  );
   String confirmTemp(String name) => _t(
     'Generate a new temporary password for $name? The previous temporary password will stop working.',
     'Generezi o parolă temporară nouă pentru $name? Parola temporară anterioară nu va mai funcționa.',

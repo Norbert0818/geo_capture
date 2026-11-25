@@ -453,17 +453,46 @@ class _WorkEditorPageState extends State<WorkEditorPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (_processing || _controller.busy || _controller.saving)
-                      const LinearProgressIndicator(),
                     Padding(
                       padding: const EdgeInsets.all(8),
-                      child: Text(
-                        _controller.saving
-                            ? s.text('Saving locally…', 'Se salvează local…')
-                            : s.text(
-                          'Draft saved locally. Original GPS and capture times are kept.',
-                          'Ciornă salvată local. GPS-ul și ora originală sunt păstrate.',
-                        ),
+                      child: Column(
+                        key: const ValueKey('workSaveStatus'),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            s.text(
+                              'Original GPS and capture times are kept.',
+                              'GPS-ul și ora originală sunt păstrate.',
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                _controller.saving
+                                    ? Icons.save_outlined
+                                    : Icons.check_circle_outline,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _controller.saving
+                                      ? s.text(
+                                    'Saving locally…',
+                                    'Se salvează local…',
+                                  )
+                                      : s.text(
+                                    'Draft saved locally',
+                                    'Ciornă salvată local',
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                     if (draft.pendingChangeId != null)

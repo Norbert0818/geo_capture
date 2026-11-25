@@ -19,11 +19,7 @@ class _AccountCredentialsDialogState extends State<AccountCredentialsDialog> {
     final t = AdminAccountsStrings.of(context);
     try {
       await Clipboard.setData(
-        ClipboardData(
-          text:
-              '${t.username}: ${widget.credentials.account.username}\n'
-              '${t.tempPassword}: ${widget.credentials.temporaryPassword}',
-        ),
+        ClipboardData(text: widget.credentials.temporaryPassword),
       );
       if (mounted) setState(() => _copied = true);
     } catch (_) {
@@ -69,6 +65,7 @@ class _AccountCredentialsDialogState extends State<AccountCredentialsDialog> {
         ),
         actions: [
           TextButton.icon(
+            key: const ValueKey('copyTemporaryPassword'),
             onPressed: _copy,
             icon: const Icon(Icons.copy),
             label: Text(_copied ? t.copied : t.copy),

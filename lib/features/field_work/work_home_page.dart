@@ -5,6 +5,8 @@ import '../../core/models/session_user.dart';
 import '../../core/widgets/control_safe_area.dart';
 import 'work_editor_page.dart';
 import 'work_models.dart';
+import 'work_list_filters.dart';
+import 'work_list_filter_panel.dart';
 import 'work_photo_view.dart';
 import 'work_qr_page.dart';
 import 'work_repository.dart';
@@ -38,7 +40,8 @@ class _WorkHomePageState extends State<WorkHomePage> {
       _localReady = false,
       _all = false,
       _settingsBusy = false;
-  int _page = 1, _total = 0;
+  int _page = 1, _total = 0, _loadId = 0;
+  WorkListFilters _filters = const WorkListFilters();
   String? _error;
   @override
   void initState() {
@@ -46,46 +49,75 @@ class _WorkHomePageState extends State<WorkHomePage> {
     _load();
   }
 
+  bool _current(int id) => mounted && id == _loadId;
+
   Future<void> _load() async {
+    final id = ++_loadId;
+    final all = _all, number = _page, filters = _filters;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final drafts = await _store.readAll();
-      if (mounted) {
-        setState(() {
-          _drafts = drafts;
-          _localReady = true;
-        });
-      }
-    } catch (failure) {
-      if (mounted) {
-        setState(() {
-          _localReady = false;
-          _error = 'work_local_invalid';
-        });
-      }
+      if (!_current(id)) return;
+      setState(() {
+        _drafts = drafts;
+        _localReady = true;
+      });
+    } catch (_) {
+      if (!_current(id)) return;
+      setState(() {
+        _localReady = false;
+        _error = 'work_local_invalid';
+      });
     }
     try {
       final settings = await _repository.settings();
-      final page = await _repository.list(all: _all, page: _page);
-      if (mounted) {
-        setState(() {
-          _settings = settings;
-          _items = (page['items'] as List)
-              .map((value) => Map<String, dynamic>.from(value as Map))
-              .toList();
-          _total = page['total'] as int;
-        });
+      if (!_current(id)) return;
+      final repository = _repository;
+      if (repository is! FilteredWorkRepository && !filters.isEmpty) {
+        throw StateError('work_filters_unavailable');
       }
+      final page = repository is FilteredWorkRepository
+          ? await repository.listFiltered(
+        all: all,
+        page: number,
+        filters: filters,
+      )
+          : await repository.list(all: all, page: number);
+      if (!_current(id)) return;
+      final total = page['total'] as int;
+      final lastPage = total == 0 ? 1 : (total + 19) ~/ 20;
+      if (number > lastPage) {
+        setState(() => _page = lastPage);
+        await _load();
+        return;
+      }
+      setState(() {
+        _settings = settings;
+        _items = (page['items'] as List)
+            .map((value) => Map<String, dynamic>.from(value as Map))
+            .toList();
+        _total = total;
+      });
     } catch (failure) {
-      if (mounted && _error == null) {
+      if (_current(id) && _error == null) {
         setState(() => _error = failure.toString());
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (_current(id)) setState(() => _loading = false);
     }
+  }
+
+  void _applyFilters(WorkListFilters value) {
+    setState(() {
+      _filters = _all && widget.user.isAdmin ? value : value.withoutOwner();
+      _page = 1;
+      _total = 0;
+      _items = [];
+    });
+    _load();
   }
 
   Future<void> _edit(WorkDraft draft) async {
@@ -181,6 +213,21 @@ class _WorkHomePageState extends State<WorkHomePage> {
     }
   }
 
+  String _serials(Map<String, dynamic> item) {
+    final oldSerial = item['oldSerialNumber'] as String?;
+    final newSerial = item['newSerialNumber'] as String?;
+    if (oldSerial != null && newSerial != null) {
+      return '$oldSerial → $newSerial';
+    }
+    return newSerial ?? oldSerial ?? item['serialNumber'] as String? ?? '—';
+  }
+
+  String _places(Map<String, dynamic> item) {
+    final locations =
+        (item['locations'] as List?)?.cast<String>() ?? const <String>[];
+    return locations.isEmpty ? '' : '\n${locations.join(' · ')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = WorkStrings.of(context);
@@ -190,7 +237,13 @@ class _WorkHomePageState extends State<WorkHomePage> {
         actions: [
           IconButton(
             onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh),
+            icon: _loading
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+                : const Icon(Icons.refresh),
           ),
         ],
       ),
@@ -198,7 +251,6 @@ class _WorkHomePageState extends State<WorkHomePage> {
         top: false,
         child: ListView(
           children: [
-            if (_loading) const LinearProgressIndicator(),
             if (_error != null)
               Card(
                 color: Theme.of(context).colorScheme.errorContainer,
@@ -261,13 +313,17 @@ class _WorkHomePageState extends State<WorkHomePage> {
                       ),
                     ),
                     SwitchListTile(
+                      key: const ValueKey('showAllWork'),
                       value: _all,
                       onChanged: _loading
                           ? null
                           : (value) {
                         setState(() {
                           _all = value;
+                          if (!value) _filters = _filters.withoutOwner();
                           _page = 1;
+                          _items = [];
+                          _total = 0;
                         });
                         _load();
                       },
@@ -311,15 +367,28 @@ class _WorkHomePageState extends State<WorkHomePage> {
               s.text('Uploaded work', 'Lucrări încărcate'),
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            WorkListFilterPanel(
+              filters: _filters,
+              showOwner: widget.user.isAdmin && _all,
+              busy: _loading,
+              onApply: _applyFilters,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                '${s.text('Page', 'Pagina')} $_page / ${_total == 0 ? 1 : (_total + 19) ~/ 20} · $_total ${s.text('results', 'rezultate')}',
+                key: const ValueKey('workResultCount'),
+              ),
+            ),
             for (final item in _items)
               Card(
                 child: ListTile(
                   onTap: () => _open(item['id'] as String),
                   title: Text(
-                    '${s.kind(WorkKind.values.byName(item['kind'] as String))} · ${item['serialNumber'] ?? '—'}',
+                    '${s.kind(WorkKind.values.byName(item['kind'] as String))} · ${_serials(item)}',
                   ),
                   subtitle: Text(
-                    '${item['owner']} · v${item['revision']} · ${item['photoCount']} ${s.text('photos', 'fotografii')}',
+                    '${item['owner']} · v${item['revision']} · ${item['photoCount']} ${s.text('photos', 'fotografii')}${_places(item)}',
                   ),
                   trailing: const Icon(Icons.chevron_right),
                 ),
@@ -329,8 +398,12 @@ class _WorkHomePageState extends State<WorkHomePage> {
                 padding: const EdgeInsets.all(12),
                 child: Text(
                   s.text(
-                    'No uploaded work yet.',
-                    'Nu există încă lucrări încărcate.',
+                    _filters.isEmpty
+                        ? 'No uploaded work yet.'
+                        : 'No work matches these filters.',
+                    _filters.isEmpty
+                        ? 'Nu există încă lucrări încărcate.'
+                        : 'Nicio lucrare nu corespunde filtrelor.',
                   ),
                 ),
               ),
@@ -338,6 +411,7 @@ class _WorkHomePageState extends State<WorkHomePage> {
               spacing: 12,
               children: [
                 TextButton(
+                  key: const ValueKey('previousWorkPage'),
                   onPressed: !_loading && _page > 1
                       ? () {
                     setState(() => _page--);
@@ -347,6 +421,7 @@ class _WorkHomePageState extends State<WorkHomePage> {
                   child: Text(s.text('Previous', 'Înapoi')),
                 ),
                 TextButton(
+                  key: const ValueKey('nextWorkPage'),
                   onPressed: !_loading && _page * 20 < _total
                       ? () {
                     setState(() => _page++);

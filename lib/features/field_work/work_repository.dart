@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/api/api_client.dart';
 import 'work_models.dart';
+import 'work_list_filters.dart';
 
 abstract interface class WorkRepository {
   Future<WorkSettings> settings();
@@ -13,14 +14,22 @@ abstract interface class WorkRepository {
   Future<WorkDetails> details(String id);
   Future<List<Map<String, dynamic>>> history(String id);
   Future<Uint8List> image(
-    String workId,
-    String photoId, {
-    bool original = false,
-  });
+      String workId,
+      String photoId, {
+        bool original = false,
+      });
   Future<WorkDetails> save(WorkDraft draft);
 }
 
-class HttpWorkRepository implements WorkRepository {
+abstract interface class FilteredWorkRepository implements WorkRepository {
+  Future<Map<String, dynamic>> listFiltered({
+    bool all = false,
+    int page = 1,
+    WorkListFilters filters = const WorkListFilters(),
+  });
+}
+
+class HttpWorkRepository implements FilteredWorkRepository {
   const HttpWorkRepository(this.api);
   final ApiClient api;
   static const root = '/api/field-work';
@@ -29,9 +38,9 @@ class HttpWorkRepository implements WorkRepository {
       WorkSettings.fromJson(await api.get('$root/settings'));
   @override
   Future<WorkSettings> updateSettings(
-    WorkSettings current,
-    bool enabled,
-  ) async => WorkSettings.fromJson(
+      WorkSettings current,
+      bool enabled,
+      ) async => WorkSettings.fromJson(
     await api.post('$root/settings', {
       'allowQrGeneration': enabled,
       'expectedVersion': current.version,
@@ -39,7 +48,16 @@ class HttpWorkRepository implements WorkRepository {
   );
   @override
   Future<Map<String, dynamic>> list({bool all = false, int page = 1}) =>
-      api.get(root, queryParameters: {'all': all, 'page': page});
+      listFiltered(all: all, page: page);
+  @override
+  Future<Map<String, dynamic>> listFiltered({
+    bool all = false,
+    int page = 1,
+    WorkListFilters filters = const WorkListFilters(),
+  }) => api.get(
+    root,
+    queryParameters: {'all': all, 'page': page, ...filters.toQueryParameters()},
+  );
   @override
   Future<WorkDetails> details(String id) async =>
       WorkDetails.fromJson(await api.get('$root/$id'));
@@ -50,10 +68,10 @@ class HttpWorkRepository implements WorkRepository {
           .toList();
   @override
   Future<Uint8List> image(
-    String workId,
-    String photoId, {
-    bool original = false,
-  }) => api.getImage(
+      String workId,
+      String photoId, {
+        bool original = false,
+      }) => api.getImage(
     '$root/$workId/photos/$photoId/${original ? 'original' : 'stamped'}',
   );
   @override

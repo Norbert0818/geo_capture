@@ -55,6 +55,13 @@ class WorkStrings {
         'Autentifică-te din nou. Ciorna locală este păstrată.',
       );
     }
+    if (code.contains('work_invalid_filters') ||
+        code.contains('work_filters_unavailable')) {
+      return text(
+        'Check the search filters and capture date range, then retry.',
+        'Verifică filtrele și intervalul datelor fotografiilor, apoi reîncearcă.',
+      );
+    }
     if (code.contains('work_invalid') ||
         code.contains('work_required') ||
         code.contains('work_serial')) {
