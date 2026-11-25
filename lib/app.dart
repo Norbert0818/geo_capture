@@ -5,6 +5,7 @@ import 'core/models/session_user.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/auth_shell.dart';
 import 'features/auth/account_page.dart';
+import 'features/field_work/work_home_page.dart';
 import 'features/auth/auth_error_message.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/change_password_page.dart';
@@ -23,6 +24,7 @@ class GeoCaptureApp extends StatefulWidget {
     this.historyRepository,
     this.accountsRepository,
     this.draftStorage,
+    this.fieldWork,
   });
 
   final AuthRepository authRepository;
@@ -30,6 +32,7 @@ class GeoCaptureApp extends StatefulWidget {
   final UploadHistoryRepository? historyRepository;
   final AdminAccountsRepository? accountsRepository;
   final DraftStorage? draftStorage;
+  final FieldWorkServices? fieldWork;
 
   @override
   State<GeoCaptureApp> createState() => _GeoCaptureAppState();
@@ -200,6 +203,7 @@ class _GeoCaptureAppState extends State<GeoCaptureApp> {
         historyRepository: widget.historyRepository,
         accountsRepository: widget.accountsRepository,
         draftStorage: widget.draftStorage,
+        fieldWork: widget.fieldWork,
       ),
     );
   }

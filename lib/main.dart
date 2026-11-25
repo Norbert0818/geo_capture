@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'features/field_work/work_home_page.dart';
+import 'features/field_work/work_repository.dart';
+import 'features/field_work/work_storage.dart';
 import 'core/api/api_client.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/drafts/sembast_draft_storage.dart';
@@ -29,6 +32,10 @@ void main() {
   runApp(
     GeoCaptureApp(
       authRepository: HttpAuthRepository(api),
+      fieldWork: FieldWorkServices(
+        repository: HttpWorkRepository(api),
+        storage: SembastWorkStorage(server: baseUrl),
+      ),
       uploadRepository: HttpUploadRepository(api),
       historyRepository: HttpUploadHistoryRepository(api),
       accountsRepository: HttpAdminAccountsRepository(api),

@@ -171,6 +171,13 @@ class ApiClient {
       return ApiException('forbidden', statusCode: status);
     }
 
+    if ((status == 400 || status == 409 || status == 413) &&
+        data is Map &&
+        data['code'] is String &&
+        (data['code'] as String).startsWith('work_')) {
+      return ApiException(data['code'] as String, statusCode: status);
+    }
+
     if (status == 413) {
       return ApiException('upload_too_large', statusCode: status);
     }

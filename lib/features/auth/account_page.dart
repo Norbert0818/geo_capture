@@ -7,7 +7,10 @@ import '../../l10n/app_localizations.dart';
 import '../drafts/draft_snapshot.dart';
 import '../drafts/draft_storage_panel.dart';
 import 'auth_error_message.dart';
+import '../field_work/work_home_page.dart';
+import '../field_work/work_strings.dart';
 import '../capture/capture_page.dart';
+import '../capture/photo_review_sheet.dart';
 import '../capture/photo_draft_store.dart';
 import '../uploads/upload_controller.dart';
 import '../uploads/upload_repository.dart';
@@ -30,6 +33,7 @@ class AccountPage extends StatefulWidget {
     this.historyRepository,
     this.accountsRepository,
     this.draftStorage,
+    this.fieldWork,
   });
 
   final SessionUser user;
@@ -40,6 +44,7 @@ class AccountPage extends StatefulWidget {
   final UploadHistoryRepository? historyRepository;
   final AdminAccountsRepository? accountsRepository;
   final DraftStorage? draftStorage;
+  final FieldWorkServices? fieldWork;
 
   @override
   State<AccountPage> createState() => _AccountPageState();
@@ -76,6 +81,17 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   void _openPhotos() {
+    if (widget.fieldWork != null) {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        isDismissible: false,
+        enableDrag: false,
+        builder: (_) => PhotoReviewSheet(drafts: _drafts, uploads: _uploads),
+      );
+      return;
+    }
     Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => CapturePage(drafts: _drafts, uploads: _uploads),
@@ -169,17 +185,48 @@ class _AccountPageState extends State<AccountPage> {
             ),
           ],
           const SizedBox(height: 24),
+          if (widget.fieldWork != null) ...[
+            FilledButton.icon(
+              key: const ValueKey('openFieldWork'),
+              onPressed: _busy
+                  ? null
+                  : () => Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WorkHomePage(
+                    services: widget.fieldWork!,
+                    user: widget.user,
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.assignment_outlined),
+              label: Text(WorkStrings.of(context).title),
+            ),
+            const SizedBox(height: 16),
+          ],
           DraftStoragePanel(drafts: _drafts),
           AnimatedBuilder(
             animation: _drafts,
-            builder: (context, _) => FilledButton.icon(
-              key: const ValueKey('openPhotosButton'),
-              onPressed: _busy || !_drafts.isReady || _drafts.isSaving
-                  ? null
-                  : _openPhotos,
-              icon: const Icon(Icons.photo_camera_outlined),
-              label: Text('${t.capturePhotos} (${_drafts.items.length})'),
-            ),
+            builder: (context, _) {
+              if (widget.fieldWork != null && _drafts.items.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return FilledButton.icon(
+                key: const ValueKey('openPhotosButton'),
+                onPressed: _busy || !_drafts.isReady || _drafts.isSaving
+                    ? null
+                    : _openPhotos,
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: Text(
+                  widget.fieldWork == null
+                      ? '${t.capturePhotos} (${_drafts.items.length})'
+                      : WorkStrings.of(context).text(
+                    'Continue previous photo draft',
+                    'Continuă ciorna foto anterioară',
+                  ),
+                ),
+              );
+            },
           ),
           if (widget.historyRepository != null) ...[
             const SizedBox(height: 12),
