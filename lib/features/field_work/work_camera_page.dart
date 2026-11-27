@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
@@ -7,6 +9,8 @@ import '../capture/camera_preview_cover.dart';
 import '../capture/camera_controls_controller.dart';
 import '../capture/camera_controls_view.dart';
 import '../capture/camera_framing.dart';
+import '../capture/gps_controller.dart';
+import '../capture/gps_status_panel.dart';
 import '../capture/capture_error_message.dart';
 import '../capture/photo_capture_service.dart';
 import '../capture/photo_draft.dart';
@@ -21,7 +25,10 @@ class WorkCameraPage extends StatefulWidget {
 
 class _WorkCameraPageState extends State<WorkCameraPage>
     with WidgetsBindingObserver {
-  final _capture = PhotoCaptureService();
+  final _gps = GpsController(GeolocatorGpsSource());
+  late final _capture = PhotoCaptureService(
+    readLocation: () async => _gps.captureLocation(),
+  );
   bool _taking = false;
 
   CameraController? _camera;
@@ -36,11 +43,13 @@ class _WorkCameraPageState extends State<WorkCameraPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _gps.addListener(_gpsChanged);
     _startCamera();
   }
 
   void _startCamera() {
     final generation = ++_generation;
+    unawaited(_gps.stop());
 
     setState(() {
       _loading = true;
@@ -48,6 +57,19 @@ class _WorkCameraPageState extends State<WorkCameraPage>
     });
 
     _cameraWork = _cameraWork.then((_) => _initializeCamera(generation));
+  }
+
+  void _gpsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _openLocationSettings() async {
+    final opened = await GeolocatorGpsSource.openSettings(_gps.status);
+    if (mounted && !opened) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(GpsStrings.of(context).settingsUnavailable)),
+      );
+    }
   }
 
   void _controlsChanged() {
@@ -85,9 +107,6 @@ class _WorkCameraPageState extends State<WorkCameraPage>
     String? error;
 
     try {
-      await PhotoCaptureService.prepareLocation();
-      if (!mounted || generation != _generation) return;
-
       final cameras = await availableCameras();
 
       if (!mounted || generation != _generation) return;
@@ -139,6 +158,7 @@ class _WorkCameraPageState extends State<WorkCameraPage>
           _loading = false;
           _cameraError = error;
         });
+        if (error == null && !_suspended) unawaited(_gps.start());
       }
     }
   }
@@ -148,10 +168,10 @@ class _WorkCameraPageState extends State<WorkCameraPage>
     if ((state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) &&
-        !_suspended &&
-        _camera?.value.isInitialized == true) {
+        !_suspended) {
       _suspended = true;
       _generation++;
+      unawaited(_gps.stop());
       setState(() => _loading = true);
       _cameraWork = _cameraWork.then((_) => _releaseCamera());
     } else if (state == AppLifecycleState.resumed && _suspended) {
@@ -167,7 +187,9 @@ class _WorkCameraPageState extends State<WorkCameraPage>
         _loading ||
         _controls?.busy == true ||
         camera == null ||
-        !camera.value.isInitialized) {
+        !camera.value.isInitialized ||
+        !_gps.canCapture) {
+      _gps.refresh();
       return;
     }
     setState(() => _taking = true);
@@ -178,15 +200,25 @@ class _WorkCameraPageState extends State<WorkCameraPage>
             !identical(camera, _camera)) {
           throw const CaptureException('capture_failed');
         }
+        if (!_gps.canCapture) throw const CaptureException('gps_not_ready');
         return (await camera.takePicture()).readAsBytes();
       });
       if (!mounted || generation != _generation) return;
+      await _gps.stop();
       await _releaseCamera();
       if (mounted) Navigator.pop(context, photo);
     } on CaptureException catch (failure) {
-      if (mounted) setState(() => _cameraError = failure.code);
+      if (mounted && generation == _generation) {
+        if (failure.code == 'gps_not_ready') {
+          _gps.refresh();
+        } else {
+          setState(() => _cameraError = failure.code);
+        }
+      }
     } catch (_) {
-      if (mounted) setState(() => _cameraError = 'capture_failed');
+      if (mounted && generation == _generation) {
+        setState(() => _cameraError = 'capture_failed');
+      }
     } finally {
       if (mounted) setState(() => _taking = false);
     }
@@ -196,6 +228,8 @@ class _WorkCameraPageState extends State<WorkCameraPage>
   void dispose() {
     _generation++;
     WidgetsBinding.instance.removeObserver(this);
+    _gps.removeListener(_gpsChanged);
+    _gps.dispose();
     _cameraWork = _cameraWork.then((_) => _releaseCamera());
     super.dispose();
   }
@@ -299,14 +333,21 @@ class _WorkCameraPageState extends State<WorkCameraPage>
                     )
                   else
                     const Spacer(),
-                  if (ready && controls != null) ...[
-                    const SizedBox(height: 8),
-                    CameraControlPanel(controls: controls, enabled: !_taking),
-                  ],
+                  GpsCameraControls(
+                    gps: _gps,
+                    camera: ready ? controls : null,
+                    enabled: ready && !_taking,
+                    onRefresh: () => unawaited(_gps.start()),
+                    onSettings: () => unawaited(_openLocationSettings()),
+                  ),
                   const SizedBox(height: 8),
                   FilledButton.icon(
                     key: const ValueKey('workShutter'),
-                    onPressed: ready && !_taking && controls?.busy != true
+                    onPressed:
+                    ready &&
+                        !_taking &&
+                        controls?.busy != true &&
+                        _gps.canCapture
                         ? _takePhoto
                         : null,
                     icon: const Icon(Icons.camera_alt),
