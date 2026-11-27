@@ -80,21 +80,29 @@ Future<void> showWorkPhoto(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(s.text('Coordinate version', 'Varianta cu coordonate')),
-              WorkPhotoImage(
-                photo: photo,
-                workId: workId,
-                repository: repository,
-                height: 280,
+              InteractiveViewer(
+                key: const ValueKey('zoomStampedWorkPhoto'),
+                maxScale: 8,
+                child: WorkPhotoImage(
+                  photo: photo,
+                  workId: workId,
+                  repository: repository,
+                  height: 280,
+                ),
               ),
               SelectableText(photo.overlayText),
               const Divider(),
               Text(s.text('Original photo', 'Fotografie originală')),
-              WorkPhotoImage(
-                photo: photo,
-                workId: workId,
-                repository: repository,
-                original: true,
-                height: 220,
+              InteractiveViewer(
+                key: const ValueKey('zoomOriginalWorkPhoto'),
+                maxScale: 8,
+                child: WorkPhotoImage(
+                  photo: photo,
+                  workId: workId,
+                  repository: repository,
+                  original: true,
+                  height: 220,
+                ),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context),

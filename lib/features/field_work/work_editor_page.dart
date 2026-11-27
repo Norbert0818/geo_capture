@@ -13,6 +13,8 @@ import 'work_repository.dart';
 import 'work_stamp_service.dart';
 import 'work_storage.dart';
 import 'work_strings.dart';
+import 'work_flow.dart';
+import 'work_review_page.dart';
 
 typedef WorkPhotoCapture =
 Future<PhotoDraft?> Function(BuildContext context, String role);
@@ -49,6 +51,7 @@ class _WorkEditorPageState extends State<WorkEditorPage> {
   final _stamps = WorkStampService();
   int _step = 0;
   bool _processing = false;
+  bool _reviewing = false;
   bool _generationRejected = false;
   @override
   void initState() {
@@ -62,40 +65,10 @@ class _WorkEditorPageState extends State<WorkEditorPage> {
     super.dispose();
   }
 
-  List<({String key, bool identity, bool newPole})> get _flow =>
-      switch (_controller.draft.document.kind) {
-        WorkKind.replacement => [
-          (key: 'oldIdentity', identity: true, newPole: false),
-          (key: 'old', identity: false, newPole: false),
-          (key: 'newIdentity', identity: true, newPole: true),
-          (key: 'new', identity: false, newPole: false),
-        ],
-        WorkKind.repair => [
-          (key: 'before', identity: false, newPole: false),
-          (key: 'identity', identity: true, newPole: false),
-          (key: 'after', identity: false, newPole: false),
-        ],
-        WorkKind.removal => [
-          (key: 'identity', identity: true, newPole: false),
-          (key: 'pole', identity: false, newPole: false),
-        ],
-        WorkKind.pit => [(key: 'pit', identity: false, newPole: false)],
-      };
+  List<WorkFlowStep> get _flow => workFlow(_controller.draft.document.kind);
 
-  bool _stepValid(int index) {
-    final step = _flow[index];
-    final doc = _controller.draft.document;
-    if (step.identity) {
-      final value = step.newPole ? doc.newPole : doc.oldPole;
-      return value?.valid == true &&
-          (!step.newPole || value!.ntetCode.isNotEmpty);
-    }
-    return doc.photos.any(
-          (photo) =>
-      photo.role == step.key &&
-          (photo.role != 'old' || photo.serialVisible),
-    );
-  }
+  bool _stepValid(int index) =>
+      workStepComplete(_controller.draft.document, index);
 
   Future<bool?> _confirm(String message, PhotoDraft photo) => showDialog<bool>(
     context: context,
@@ -324,6 +297,60 @@ class _WorkEditorPageState extends State<WorkEditorPage> {
   }
 
   Future<void> _submit() async {
+    if (_processing || _reviewing || _controller.busy || _controller.saving) {
+      return;
+    }
+    final draft = _controller.draft;
+    if (draft.pendingChangeId == null) {
+      final invalid = firstInvalidWorkStep(draft);
+      if (invalid != null) {
+        setState(() => _step = invalid);
+        final s = WorkStrings.of(context);
+        final reasonMissing =
+            draft.document.complete &&
+                draft.expectedVersion != null &&
+                draft.reason.trim().length < 3;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              reasonMissing
+                  ? s.text(
+                'Enter a change reason of at least 3 characters.',
+                'Introdu un motiv de minimum 3 caractere pentru modificări.',
+              )
+                  : s.text(
+                'Complete the required identifiers, photos and locations.',
+                'Completează identificatorii, fotografiile și locațiile obligatorii.',
+              ),
+            ),
+          ),
+        );
+        return;
+      }
+      if (_controller.error?.contains('work_local') == true) return;
+      FocusManager.instance.primaryFocus?.unfocus();
+      setState(() => _reviewing = true);
+      WorkReviewDecision? decision;
+      try {
+        decision = await Navigator.push<WorkReviewDecision>(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                WorkReviewPage(draft: draft, repository: widget.repository),
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _reviewing = false);
+      }
+      if (!mounted || decision == null) return;
+      if (decision.editStep != null) {
+        setState(
+              () => _step = decision!.editStep!.clamp(0, _flow.length - 1).toInt(),
+        );
+        return;
+      }
+    }
+    if (!mounted) return;
     final result = await _controller.upload();
     if (mounted &&
         _controller.error?.contains('work_qr_generation_disabled') == true) {
@@ -426,7 +453,7 @@ class _WorkEditorPageState extends State<WorkEditorPage> {
       animation: _controller,
       builder: (context, _) {
         final draft = _controller.draft;
-        final editable = !_processing && !_controller.locked;
+        final editable = !_processing && !_reviewing && !_controller.locked;
         return PopScope(
           canPop:
           !_processing &&
@@ -512,6 +539,7 @@ class _WorkEditorPageState extends State<WorkEditorPage> {
                         onPressed:
                         _controller.busy ||
                             _processing ||
+                            _reviewing ||
                             _controller.saving
                             ? null
                             : _submit,
@@ -587,6 +615,7 @@ class _WorkEditorPageState extends State<WorkEditorPage> {
                               onPressed:
                               _controller.busy ||
                                   _processing ||
+                                  _reviewing ||
                                   _controller.saving
                                   ? null
                                   : _step == _flow.length - 1
@@ -597,8 +626,8 @@ class _WorkEditorPageState extends State<WorkEditorPage> {
                               child: Text(
                                 _step == _flow.length - 1
                                     ? s.text(
-                                  'Upload / save revision',
-                                  'Încarcă / salvează versiunea',
+                                  'Review and upload',
+                                  'Verifică și încarcă',
                                 )
                                     : s.text('Continue', 'Continuă'),
                               ),
