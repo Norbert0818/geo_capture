@@ -10,9 +10,13 @@ class WorkListFilters {
     this.owner = '',
     this.fromDate = '',
     this.toDate = '',
+    this.countyCode = '',
+    this.localityCode = '',
+    this.state = '',
   });
 
   final WorkKind? kind;
+  final String countyCode, localityCode, state;
   final String serial, ntet, locality, county, owner, fromDate, toDate;
 
   Map<String, String> toQueryParameters() => {
@@ -25,6 +29,9 @@ class WorkListFilters {
       'owner': owner,
       'fromDate': fromDate,
       'toDate': toDate,
+      'countyCode': countyCode,
+      'localityCode': localityCode,
+      'state': state,
     }.entries)
       if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
   };
@@ -52,6 +59,35 @@ class WorkListFilters {
     county: county,
     fromDate: fromDate,
     toDate: toDate,
+    countyCode: countyCode,
+    localityCode: localityCode,
+    state: state,
+  );
+
+  WorkListFilters copyWith({
+    WorkKind? kind,
+    String? serial,
+    String? ntet,
+    String? locality,
+    String? county,
+    String? owner,
+    String? fromDate,
+    String? toDate,
+    String? countyCode,
+    String? localityCode,
+    String? state,
+  }) => WorkListFilters(
+    kind: kind ?? this.kind,
+    serial: serial ?? this.serial,
+    ntet: ntet ?? this.ntet,
+    locality: locality ?? this.locality,
+    county: county ?? this.county,
+    owner: owner ?? this.owner,
+    fromDate: fromDate ?? this.fromDate,
+    toDate: toDate ?? this.toDate,
+    countyCode: countyCode ?? this.countyCode,
+    localityCode: localityCode ?? this.localityCode,
+    state: state ?? this.state,
   );
 
   static String date(DateTime value) =>

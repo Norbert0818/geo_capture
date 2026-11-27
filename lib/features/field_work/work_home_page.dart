@@ -5,7 +5,10 @@ import 'package:uuid/uuid.dart';
 import '../../core/models/session_user.dart';
 import '../../core/widgets/control_safe_area.dart';
 import 'work_editor_page.dart';
+import 'work_task_page.dart';
+import 'work_reports_page.dart';
 import 'work_models.dart';
+import 'work_photo_names.dart';
 import 'work_list_filters.dart';
 import 'work_list_filter_panel.dart';
 import 'work_photo_view.dart';
@@ -20,10 +23,12 @@ class FieldWorkServices {
     required this.repository,
     required this.storage,
     this.shareFile,
+    this.taskServices = const WorkTaskServices(),
   });
   final WorkRepository repository;
   final SembastWorkStorage storage;
   final WorkFileShare? shareFile;
+  final WorkTaskServices taskServices;
 }
 
 class WorkHomePage extends StatefulWidget {
@@ -88,9 +93,8 @@ class _WorkHomePageState extends State<WorkHomePage> {
       );
     } catch (error) {
       if (mounted && !cancellation.isCancelled) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(s.error(error.toString()))));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(s.error(error.toString()))));
       }
     } finally {
       if (identical(_exportCancel, cancellation)) _exportCancel = null;
@@ -173,7 +177,15 @@ class _WorkHomePageState extends State<WorkHomePage> {
     await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => WorkEditorPage(
+        builder: (_) => draft.document.modern
+            ? WorkTaskPage(
+          draft: draft,
+          store: _store,
+          repository: _repository,
+          allowGeneration: _settings.allowQrGeneration,
+          services: widget.services.taskServices,
+        )
+            : WorkEditorPage(
           draft: draft,
           store: _store,
           repository: _repository,
@@ -187,7 +199,11 @@ class _WorkHomePageState extends State<WorkHomePage> {
   Future<void> _newWork(WorkKind kind) => _edit(
     WorkDraft(
       id: const Uuid().v4(),
-      document: WorkDocument(kind: kind),
+      document: WorkDocument(
+        kind: kind,
+        schemaVersion: 2,
+        progress: 'in_progress',
+      ),
     ),
   );
   Future<void> _discard(WorkDraft draft) async {
@@ -240,7 +256,9 @@ class _WorkHomePageState extends State<WorkHomePage> {
                 id: id,
                 document: details.document,
                 expectedVersion: details.version,
-                reason: '',
+                reason: details.document.inProgress
+                    ? 'Continue work'
+                    : '',
               ),
             );
           },
@@ -264,12 +282,18 @@ class _WorkHomePageState extends State<WorkHomePage> {
   }
 
   String _serials(Map<String, dynamic> item) {
+    final s = WorkStrings.of(context);
     final oldSerial = item['oldSerialNumber'] as String?;
     final newSerial = item['newSerialNumber'] as String?;
-    if (oldSerial != null && newSerial != null) {
-      return '$oldSerial → $newSerial';
+    final report = item['report'] as Map?;
+    if (item['kind'] == 'pit') return '—';
+    if (item['kind'] == 'replacement') {
+      return '${s.serial(oldSerial, report?['oldSerialState'] as String?)} → ${s.serial(newSerial, report?['newSerialState'] as String?)}';
     }
-    return newSerial ?? oldSerial ?? item['serialNumber'] as String? ?? '—';
+    return s.serial(
+      oldSerial ?? item['serialNumber'] as String?,
+      report?['oldSerialState'] as String?,
+    );
   }
 
   String _places(Map<String, dynamic> item) {
@@ -285,6 +309,22 @@ class _WorkHomePageState extends State<WorkHomePage> {
       appBar: AppBar(
         title: Text(s.title),
         actions: [
+          if (widget.user.isAdmin)
+            IconButton(
+              key: const ValueKey('openWorkReports'),
+              tooltip: s.text('Work reports', 'Rapoarte lucrări'),
+              icon: const Icon(Icons.table_view_outlined),
+              onPressed: () => Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WorkReportsPage(
+                    repository: _repository,
+                    onOpen: _open,
+                    shareFile: widget.services.shareFile,
+                  ),
+                ),
+              ),
+            ),
           IconButton(
             onPressed: _loading ? null : _load,
             icon: _loading
@@ -401,7 +441,7 @@ class _WorkHomePageState extends State<WorkHomePage> {
                   child: ListTile(
                     title: Text(s.kind(draft.document.kind)),
                     subtitle: Text(
-                      '${draft.document.oldPole?.serialNumber ?? ''} → ${draft.document.newPole?.serialNumber ?? ''}\n${draft.document.photos.length} ${s.text('photos', 'fotografii')}',
+                      '${draft.document.kind == WorkKind.pit ? '—' : s.serial(draft.document.oldPole?.serialNumber, draft.document.oldPole?.serialState)}${draft.document.kind == WorkKind.replacement ? ' → ${s.serial(draft.document.newPole?.serialNumber, draft.document.newPole?.serialState)}' : ''}\n${draft.document.photos.length} ${s.text('photos', 'fotografii')}',
                     ),
                     isThreeLine: true,
                     onTap: _localReady ? () => _edit(draft) : null,
@@ -460,7 +500,7 @@ class _WorkHomePageState extends State<WorkHomePage> {
                     '${s.kind(WorkKind.values.byName(item['kind'] as String))} · ${_serials(item)}',
                   ),
                   subtitle: Text(
-                    '${item['owner']} · v${item['revision']} · ${item['photoCount']} ${s.text('photos', 'fotografii')}${_places(item)}',
+                    '${item['owner']} · v${item['revision']} · ${item['photoCount']} ${s.text('photos', 'fotografii')}${_places(item)}${item['report'] is Map ? '\n${workStatusLabel(s, (item['report'] as Map)['status'] as String?)}' : ''}',
                   ),
                   trailing: const Icon(Icons.chevron_right),
                 ),
@@ -561,9 +601,8 @@ class _WorkDetailsPageState extends State<WorkDetailsPage> {
       );
     } catch (error) {
       if (mounted && !cancellation.isCancelled) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(s.error(error.toString()))));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(s.error(error.toString()))));
       }
     } finally {
       if (identical(_exportCancel, cancellation)) _exportCancel = null;
@@ -628,9 +667,8 @@ class _WorkDetailsPageState extends State<WorkDetailsPage> {
       );
     } catch (failure) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(s.error(failure.toString()))));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(s.error(failure.toString()))));
       }
     }
   }
@@ -660,15 +698,30 @@ class _WorkDetailsPageState extends State<WorkDetailsPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(s.kind(doc.kind), style: Theme.of(context).textTheme.titleLarge),
+        if (doc.modern)
+          Text(
+            workStatusLabel(
+              s,
+              doc.inProgress
+                  ? 'in_progress'
+                  : switch (doc.kind) {
+                WorkKind.replacement => 'replaced',
+                WorkKind.repair => 'repaired',
+                WorkKind.removal => 'removed',
+                WorkKind.pit => 'pit',
+              },
+            ),
+          ),
         if (doc.oldPole != null)
           SelectableText(
-            '${s.text('Existing / old', 'Existent / vechi')}: ${doc.oldPole!.serialNumber}\nNTET: ${doc.oldPole!.ntetCode}',
+            '${s.text('Existing / old', 'Existent / vechi')}: ${s.serial(doc.oldPole!.serialNumber, doc.oldPole!.serialState)}${doc.oldPole!.ntetCode.isEmpty ? '' : '\nNTET: ${doc.oldPole!.ntetCode}'}',
           ),
         if (doc.newPole != null) ...[
           SelectableText(
-            '${s.text('New', 'Nou')}: ${doc.newPole!.serialNumber}\nNTET: ${doc.newPole!.ntetCode}',
+            '${s.text('New', 'Nou')}: ${s.serial(doc.newPole!.serialNumber, doc.newPole!.serialState)}${doc.newPole!.ntetCode.isEmpty ? '' : '\nNTET: ${doc.newPole!.ntetCode}'}',
           ),
-          WorkQrCard(pole: doc.newPole!),
+          if (!doc.modern || doc.newPole!.source == 'generated')
+            WorkQrCard(pole: doc.newPole!),
         ],
         if (doc.notes.isNotEmpty)
           Padding(
@@ -682,6 +735,9 @@ class _WorkDetailsPageState extends State<WorkDetailsPage> {
               child: Column(
                 children: [
                   Text(s.role(photo.role)),
+                  SelectableText(
+                    workPhotoName(widget.id, doc, doc.photos.indexOf(photo)),
+                  ),
                   InkWell(
                     onTap: () => showWorkPhoto(
                       context,
@@ -749,7 +805,9 @@ class _WorkDetailsPageState extends State<WorkDetailsPage> {
                   },
                   icon: const Icon(Icons.edit_outlined),
                   label: Text(
-                    s.text(
+                    work.document.inProgress
+                        ? s.text('Continue work', 'Continuă lucrarea')
+                        : s.text(
                       'Edit — create a new revision',
                       'Modifică — creează o versiune nouă',
                     ),

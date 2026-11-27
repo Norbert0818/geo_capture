@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+
 import 'work_models.dart';
 
 class WorkStrings {
@@ -8,6 +9,19 @@ class WorkStrings {
       WorkStrings(Localizations.localeOf(context).languageCode == 'ro');
   String text(String en, String romanian) => ro ? romanian : en;
   String get title => text('Field work', 'Lucrări pe teren');
+  String serial(String? number, String? state) {
+    if (number?.isNotEmpty == true) {
+      return state == 'damaged'
+          ? '$number · ${text('Damaged label', 'Etichetă deteriorată')}'
+          : number!;
+    }
+    return switch (state) {
+      'missing' => text('No serial number', 'Fără număr de serie'),
+      'damaged' => text('Damaged label', 'Etichetă deteriorată'),
+      _ => text('Serial not recorded yet', 'Seria nu este încă înregistrată'),
+    };
+  }
+
   String kind(WorkKind value) => switch (value) {
     WorkKind.replacement => text('Replacement', 'Înlocuire'),
     WorkKind.repair => text('Repair', 'Remediere'),
@@ -20,10 +34,37 @@ class WorkStrings {
     'before' => text('Before repair', 'Înainte de remediere'),
     'after' => text('After repair', 'După remediere'),
     'pole' => text('Pole photo', 'Poză stâlp'),
+    'old_label' => text('Old pole label', 'Eticheta stâlpului vechi'),
+    'new_label' => text('New pole label', 'Eticheta stâlpului nou'),
+    'label' => text('Pole label', 'Eticheta stâlpului'),
     _ => text('Pit photo', 'Poză groapă'),
   };
   String error(String? code) {
     if (code == null) return '';
+    if (code.contains('work_serial_decision_required')) {
+      return text(
+        'Confirm whether a serial exists, is missing or damaged.',
+        'Confirmă dacă seria există, lipsește sau eticheta este deteriorată.',
+      );
+    }
+    if (code.contains('work_invalid_place')) {
+      return text(
+        'The selected locality does not match its county.',
+        'Localitatea selectată nu corespunde județului.',
+      );
+    }
+    if (code.contains('work_catalogue_unavailable')) {
+      return text(
+        'The locality catalogue is unavailable. Try again later.',
+        'Catalogul localităților nu este disponibil. Reîncearcă ulterior.',
+      );
+    }
+    if (code.contains('work_invalid_serial_evidence')) {
+      return text(
+        'Confirm the serial using a photo from the correct pole.',
+        'Confirmă seria folosind o fotografie a stâlpului corect.',
+      );
+    }
     if (code.contains('work_export_too_many')) {
       return text(
         'The export is limited to 1,000 work records. Narrow the search filters and retry.',
@@ -106,6 +147,8 @@ class WorkStrings {
     'oldPole' => text('Existing / old pole', 'Stâlp existent / vechi'),
     'newPole' => text('New pole', 'Stâlp nou'),
     'photos' => text('Photos or photo details', 'Fotografii sau detalii foto'),
+    'schemaVersion' => text('Work format', 'Formatul lucrării'),
+    'progress' => text('Work status', 'Starea lucrării'),
     _ => text('Notes', 'Observații'),
   };
 }

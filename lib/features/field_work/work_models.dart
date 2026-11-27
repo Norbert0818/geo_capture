@@ -18,23 +18,37 @@ class PoleIdentity {
     this.ntetCode = '',
     this.source = 'manual',
     this.rawCode,
+    this.serialState,
+    this.confirmed,
+    this.evidencePhotoId,
   });
   final String serialNumber;
   final String ntetCode;
   final String source;
-  final String? rawCode;
+  final String? rawCode, serialState, evidencePhotoId;
+  final bool? confirmed;
+  static final numericSerial = RegExp(r'^[0-9]{1,128}$');
+  bool get resolved => serialState == null ? valid : confirmed == true && valid;
+  bool get pending =>
+      serialState == 'pending' || (serialState == null && serialNumber.isEmpty);
 
   Map<String, dynamic> toJson() => {
     'serialNumber': serialNumber,
     'ntetCode': ntetCode,
     'source': source,
     'rawCode': rawCode,
+    if (serialState != null) 'serialState': serialState,
+    if (confirmed != null) 'confirmed': confirmed,
+    if (evidencePhotoId != null) 'evidencePhotoId': evidencePhotoId,
   };
   factory PoleIdentity.fromJson(Map<String, dynamic> json) => PoleIdentity(
     serialNumber: json['serialNumber'] as String,
     ntetCode: json['ntetCode'] as String,
     source: json['source'] as String,
     rawCode: json['rawCode'] as String?,
+    serialState: json['serialState'] as String?,
+    confirmed: json['confirmed'] as bool?,
+    evidencePhotoId: json['evidencePhotoId'] as String?,
   );
   String get generatedPayload => jsonEncode({
     'type': 'geocapture.pole',
@@ -42,15 +56,67 @@ class PoleIdentity {
     'ntetCode': ntetCode,
     'serialNumber': serialNumber,
   });
-  bool get valid =>
-      serialNumber.trim().isNotEmpty &&
-      serialNumber.length <= 1024 &&
-      ntetCode.length <= 128;
+  bool get valid {
+    if (serialState == null) {
+      return serialNumber.trim().isNotEmpty &&
+          serialNumber.length <= 1024 &&
+          ntetCode.length <= 128;
+    }
+    if (ntetCode.length > 128 ||
+        ntetCode != ntetCode.trim() ||
+        RegExp(r'[\x00-\x1f\x7f]').hasMatch(ntetCode) ||
+        (rawCode?.length ?? 0) > 4096 ||
+        !['manual', 'scanned', 'ocr', 'generated'].contains(source) ||
+        source == 'scanned' && (rawCode?.trim().isNotEmpty != true) ||
+        source == 'generated' &&
+            (serialState != 'present' ||
+                ntetCode.isEmpty ||
+                rawCode != generatedPayload) ||
+        confirmed != true) {
+      return false;
+    }
+    return switch (serialState) {
+      'present' => numericSerial.hasMatch(serialNumber),
+      'missing' => serialNumber.isEmpty,
+      'damaged' => serialNumber.isEmpty || numericSerial.hasMatch(serialNumber),
+      _ => false,
+    };
+  }
+
+  bool get validPending =>
+      serialState == 'pending' &&
+          confirmed != true &&
+          serialNumber.isEmpty &&
+          ntetCode.length <= 128;
+  PoleIdentity copyWith({
+    String? serialNumber,
+    String? ntetCode,
+    String? source,
+    String? rawCode,
+    String? serialState,
+    bool? confirmed,
+    String? evidencePhotoId,
+    bool clearEvidence = false,
+  }) => PoleIdentity(
+    serialNumber: serialNumber ?? this.serialNumber,
+    ntetCode: ntetCode ?? this.ntetCode,
+    source: source ?? this.source,
+    rawCode: rawCode ?? this.rawCode,
+    serialState: serialState ?? this.serialState,
+    confirmed: confirmed ?? this.confirmed,
+    evidencePhotoId: clearEvidence
+        ? null
+        : evidencePhotoId ?? this.evidencePhotoId,
+  );
+
   PoleIdentity generated() => PoleIdentity(
     serialNumber: serialNumber,
     ntetCode: ntetCode,
     source: 'generated',
     rawCode: generatedPayload,
+    serialState: serialState,
+    confirmed: confirmed,
+    evidencePhotoId: evidencePhotoId,
   );
 }
 
@@ -74,17 +140,20 @@ class WorkPhoto {
     required this.placeSource,
     required this.serialVisible,
     required this.originalMimeType,
+    this.countyCode,
+    this.localityCode,
     Uint8List? original,
     Uint8List? stamped,
   }) : capturedAtUtc = capturedAt.toUtc(),
-       original = original == null
-           ? null
-           : Uint8List.fromList(original).asUnmodifiableView(),
-       stamped = stamped == null
-           ? null
-           : Uint8List.fromList(stamped).asUnmodifiableView();
+        original = original == null
+            ? null
+            : Uint8List.fromList(original).asUnmodifiableView(),
+        stamped = stamped == null
+            ? null
+            : Uint8List.fromList(stamped).asUnmodifiableView();
 
   final String id, role, locality, county, placeSource, originalMimeType;
+  final String? countyCode, localityCode;
   final PhotoLocation location;
   final DateTime capturedAtUtc;
   final int utcOffsetMinutes;
@@ -109,12 +178,14 @@ class WorkPhoto {
     'serialVisible': serialVisible,
     'originalMimeType': originalMimeType,
     'overlayText': overlayText,
+    if (countyCode != null) 'countyCode': countyCode,
+    if (localityCode != null) 'localityCode': localityCode,
   };
   factory WorkPhoto.fromJson(
-    Map<String, dynamic> value, {
-    Uint8List? original,
-    Uint8List? stamped,
-  }) {
+      Map<String, dynamic> value, {
+        Uint8List? original,
+        Uint8List? stamped,
+      }) {
     final result = WorkPhoto(
       id: value['id'] as String,
       role: value['role'] as String,
@@ -131,6 +202,8 @@ class WorkPhoto {
       placeSource: value['placeSource'] as String,
       serialVisible: value['serialVisible'] as bool,
       originalMimeType: value['originalMimeType'] as String,
+      countyCode: value['countyCode'] as String?,
+      localityCode: value['localityCode'] as String?,
       original: original,
       stamped: stamped,
     );
@@ -151,6 +224,8 @@ class WorkPhoto {
         placeSource: placeSource,
         serialVisible: serialVisible,
         originalMimeType: originalMimeType,
+        countyCode: countyCode,
+        localityCode: localityCode,
         original: originalBytes,
         stamped: stampedBytes,
       );
@@ -162,9 +237,15 @@ class WorkDocument {
     this.oldPole,
     this.newPole,
     this.notes = '',
+    this.schemaVersion,
+    this.progress,
     List<WorkPhoto> photos = const [],
   }) : photos = List.unmodifiable(photos);
   final WorkKind kind;
+  final int? schemaVersion;
+  final String? progress;
+  bool get modern => schemaVersion == 2;
+  bool get inProgress => modern && progress == 'in_progress';
   final PoleIdentity? oldPole, newPole;
   final String notes;
   final List<WorkPhoto> photos;
@@ -174,25 +255,29 @@ class WorkDocument {
     'newPole': newPole?.toJson(),
     'notes': notes,
     'photos': photos.map((photo) => photo.toJson()).toList(),
+    if (schemaVersion != null) 'schemaVersion': schemaVersion,
+    if (progress != null) 'progress': progress,
   };
   factory WorkDocument.fromJson(Map<String, dynamic> value) => WorkDocument(
     kind: WorkKind.values.byName(value['kind'] as String),
     oldPole: value['oldPole'] == null
         ? null
         : PoleIdentity.fromJson(
-            Map<String, dynamic>.from(value['oldPole'] as Map),
-          ),
+      Map<String, dynamic>.from(value['oldPole'] as Map),
+    ),
     newPole: value['newPole'] == null
         ? null
         : PoleIdentity.fromJson(
-            Map<String, dynamic>.from(value['newPole'] as Map),
-          ),
+      Map<String, dynamic>.from(value['newPole'] as Map),
+    ),
     notes: value['notes'] as String,
+    schemaVersion: value['schemaVersion'] as int?,
+    progress: value['progress'] as String?,
     photos: (value['photos'] as List)
         .map(
           (photo) =>
-              WorkPhoto.fromJson(Map<String, dynamic>.from(photo as Map)),
-        )
+          WorkPhoto.fromJson(Map<String, dynamic>.from(photo as Map)),
+    )
         .toList(),
   );
   WorkDocument copyWith({
@@ -200,24 +285,83 @@ class WorkDocument {
     PoleIdentity? newPole,
     String? notes,
     List<WorkPhoto>? photos,
+    int? schemaVersion,
+    String? progress,
   }) => WorkDocument(
     kind: kind,
+    schemaVersion: schemaVersion ?? this.schemaVersion,
+    progress: progress ?? this.progress,
     oldPole: oldPole ?? this.oldPole,
     newPole: newPole ?? this.newPole,
     notes: notes ?? this.notes,
     photos: photos ?? this.photos,
   );
-  bool get complete =>
-      (kind == WorkKind.pit || oldPole?.valid == true) &&
+  List<String> get allowedRoles => [
+    ...workRoles[kind]!,
+    if (modern && kind == WorkKind.replacement) ...['old_label', 'new_label'],
+    if (modern && (kind == WorkKind.repair || kind == WorkKind.removal))
+      'label',
+  ];
+  bool get validPhotoSet =>
+      photos.isNotEmpty &&
+          photos.length <= 10 &&
+          photos.map((photo) => photo.id).toSet().length == photos.length &&
+          photos.every(
+                (photo) =>
+            allowedRoles.contains(photo.role) &&
+                photo.locality.trim().isNotEmpty &&
+                photo.county.trim().isNotEmpty,
+          );
+  bool get readyToSave => modern
+      ? schemaVersion == 2 &&
+      ['in_progress', 'completed'].contains(progress) &&
+      _identitiesFitKind &&
+      (inProgress
+          ? validPhotoSet &&
+          [oldPole, newPole].every(
+                (pole) =>
+            pole == null || pole.valid || pole.validPending,
+          )
+          : complete)
+      : complete;
+  bool get _identitiesFitKind => kind == WorkKind.pit
+      ? oldPole == null && newPole == null
+      : oldPole?.source != 'generated' &&
+      (kind == WorkKind.replacement || newPole == null) &&
+      [oldPole, newPole].every((pole) {
+        if (pole?.evidencePhotoId == null) return true;
+        final roles = identical(pole, newPole)
+            ? ['new', 'new_label']
+            : kind == WorkKind.replacement
+            ? ['old', 'old_label']
+            : kind == WorkKind.repair
+            ? ['before', 'after', 'label']
+            : ['pole', 'label'];
+        return photos.any(
+              (photo) =>
+          photo.id == pole!.evidencePhotoId &&
+              roles.contains(photo.role),
+        );
+      });
+  bool get complete => modern
+      ? _identitiesFitKind &&
+      validPhotoSet &&
+      workRoles[kind]!.every(
+            (role) => photos.any((photo) => photo.role == role),
+      ) &&
+      (kind == WorkKind.pit || oldPole?.resolved == true) &&
+      (kind != WorkKind.replacement || newPole?.resolved == true)
+      : (kind == WorkKind.pit || oldPole?.valid == true) &&
       (kind != WorkKind.replacement ||
-          (newPole?.valid == true && newPole!.ntetCode.trim().isNotEmpty)) &&
+          (newPole?.valid == true &&
+              newPole!.ntetCode.trim().isNotEmpty)) &&
       photos.length <= 10 &&
       workRoles[kind]!.every(
-        (role) => photos.any((photo) => photo.role == role),
+            (role) => photos.any((photo) => photo.role == role),
       ) &&
       photos.every(
-        (photo) =>
-            workRoles[kind]!.contains(photo.role) &&
+            (photo) =>
+        workRoles[kind]!.contains(photo.role) &&
             photo.locality.trim().isNotEmpty &&
             photo.county.trim().isNotEmpty &&
             (photo.role != 'old' || photo.serialVisible),

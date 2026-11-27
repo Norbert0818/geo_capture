@@ -25,28 +25,28 @@ class PoleCode {
     if (serial.isEmpty) {
       serial =
           RegExp(
-            r'(?:n[°ºo.]?\s*serie|nr[.\s_-]*serie|serial(?:\s*number)?|serie)\s*[:=]\s*([A-Za-z0-9._/-]+)',
+            r'(?:n[°ºo.]?\s*serie|nr[.\s_-]*serie|serial(?:\s*number)?|serie|s\s*/\s*n|sn)\s*[:=]\s*([A-Za-z0-9._/-]+)',
             caseSensitive: false,
           ).firstMatch(value)?.group(1) ??
-          '';
+              '';
       ntet =
           RegExp(
             r'NTET(?:\s*(?:Cd|Cod|Code)\.?)?\s*[:=]\s*([A-Za-z0-9._/-]+)',
             caseSensitive: false,
           ).firstMatch(value)?.group(1) ??
-          ntet;
+              ntet;
       if (serial.isEmpty && RegExp(r'^\d+$').hasMatch(value)) serial = value;
     }
     final uri = Uri.tryParse(value);
     if (uri != null && uri.hasQuery) {
       serial =
           uri.queryParameters['serialNumber'] ??
-          uri.queryParameters['serial'] ??
-          serial;
+              uri.queryParameters['serial'] ??
+              serial;
       ntet =
           uri.queryParameters['ntetCode'] ??
-          uri.queryParameters['ntet'] ??
-          ntet;
+              uri.queryParameters['ntet'] ??
+              ntet;
     }
     if (serial.length > 1024 || ntet.length > 128) {
       throw const FormatException('Pole code is too long');

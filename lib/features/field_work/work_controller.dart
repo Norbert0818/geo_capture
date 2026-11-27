@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+
 import '../../core/api/api_client.dart';
 
 import 'work_models.dart';
@@ -73,7 +74,7 @@ class WorkController extends ChangeNotifier {
     try {
       await _writes;
       if (_localFailure ||
-          !_draft.document.complete ||
+          !_draft.document.readyToSave ||
           (_draft.expectedVersion != null && _draft.reason.trim().length < 3)) {
         return null;
       }

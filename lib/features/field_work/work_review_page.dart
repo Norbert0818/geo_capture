@@ -32,7 +32,9 @@ class _WorkReviewPageState extends State<WorkReviewPage> {
     if (_decided) return;
     if (decision != null &&
         decision.editStep == null &&
-        firstInvalidWorkStep(widget.draft) != null) {
+        (widget.draft.document.inProgress
+            ? !widget.draft.document.readyToSave
+            : firstInvalidWorkStep(widget.draft) != null)) {
       return;
     }
     _decided = true;
@@ -49,6 +51,10 @@ class _WorkReviewPageState extends State<WorkReviewPage> {
   String _source(PoleIdentity pole, WorkStrings s) => switch (pole.source) {
     'scanned' => s.text('Scanned code', 'Cod scanat'),
     'generated' => s.text('Generated QR code', 'Cod QR generat'),
+    'ocr' => s.text(
+      'Read from photo, confirmed',
+      'Citită din fotografie, confirmată',
+    ),
     _ => s.text('Entered manually', 'Introduse manual'),
   };
 
@@ -84,6 +90,27 @@ class _WorkReviewPageState extends State<WorkReviewPage> {
                 _edit(index, s, 'editReview:${step.key}'),
               ],
             ),
+            if (!step.identity && phaseHasIdentity(document, step.key)) ...[
+              const SizedBox(height: 8),
+              SelectableText(
+                pole?.serialNumber.isNotEmpty == true
+                    ? pole!.serialNumber
+                    : switch (pole?.serialState) {
+                  'missing' => s.text(
+                    'No serial number',
+                    'Fără număr de serie',
+                  ),
+                  'damaged' => s.text(
+                    'Damaged label',
+                    'Etichetă deteriorată',
+                  ),
+                  _ => s.text('Not recorded yet', 'Necompletat încă'),
+                },
+              ),
+              if (pole?.ntetCode.isNotEmpty == true)
+                Text('NTET: ${pole!.ntetCode}'),
+              if (pole != null) Text(_source(pole, s)),
+            ],
             if (step.identity) ...[
               const SizedBox(height: 8),
               Text(s.text('Serial number', 'Număr de serie')),
@@ -103,7 +130,8 @@ class _WorkReviewPageState extends State<WorkReviewPage> {
                 ),
             ] else ...[
               for (final photo in document.photos.where(
-                    (photo) => photo.role == step.key,
+                    (photo) =>
+                    workPhaseRoles(document, step.key).contains(photo.role),
               ))
                 Padding(
                   key: ValueKey('reviewPhoto:${photo.id}'),
@@ -130,7 +158,7 @@ class _WorkReviewPageState extends State<WorkReviewPage> {
                       Text(
                         '${s.text('Location accuracy', 'Precizia locației')}: ${photo.location.accuracyMeters.toStringAsFixed(1)} m',
                       ),
-                      if (photo.role == 'old')
+                      if (photo.role == 'old' && !document.modern)
                         Text(
                           photo.serialVisible
                               ? s.text(
@@ -164,13 +192,17 @@ class _WorkReviewPageState extends State<WorkReviewPage> {
     final s = WorkStrings.of(context);
     final draft = widget.draft;
     final document = draft.document;
-    final steps = workFlow(document.kind);
-    final invalid = firstInvalidWorkStep(draft);
+    final steps = workFlowFor(document);
+    final invalid = document.inProgress
+        ? (document.readyToSave ? null : 0)
+        : firstInvalidWorkStep(draft);
     final revision = draft.expectedVersion != null;
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          s.text('Review before upload', 'Verifică înainte de încărcare'),
+          document.inProgress
+              ? s.text('Review saved progress', 'Verifică progresul salvat')
+              : s.text('Review before upload', 'Verifică înainte de încărcare'),
         ),
       ),
       body: ControlSafeArea(
@@ -217,6 +249,18 @@ class _WorkReviewPageState extends State<WorkReviewPage> {
                             _edit(steps.length - 1, s, 'editReview:notes'),
                           ],
                         ),
+                        if (document.modern)
+                          Text(
+                            document.inProgress
+                                ? s.text(
+                              'In progress — the other phase can be added later.',
+                              'În lucru — cealaltă etapă poate fi adăugată ulterior.',
+                            )
+                                : s.text(
+                              'Completed work',
+                              'Lucrare finalizată',
+                            ),
+                          ),
                         SelectableText(
                           document.notes.trim().isEmpty ? '—' : document.notes,
                         ),
@@ -230,9 +274,9 @@ class _WorkReviewPageState extends State<WorkReviewPage> {
                                     'Reason for change',
                                     'Motivul modificării',
                                   ),
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
                                 ),
                               ),
                               _edit(steps.length - 1, s, 'editReview:reason'),
@@ -303,7 +347,9 @@ class _WorkReviewPageState extends State<WorkReviewPage> {
                               : Icons.cloud_upload_outlined,
                         ),
                         label: Text(
-                          revision
+                          document.inProgress
+                              ? s.text('Save progress', 'Salvează progresul')
+                              : revision
                               ? s.text(
                             'Save new revision',
                             'Salvează versiunea nouă',

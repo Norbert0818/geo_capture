@@ -42,8 +42,19 @@ abstract interface class WorkExportRepository {
       });
 }
 
+abstract interface class WorkReportRepository {
+  Future<Uint8List> exportReport({
+    required WorkListFilters filters,
+    required bool romanian,
+    CancelToken? cancelToken,
+  });
+}
+
 class HttpWorkRepository
-    implements FilteredWorkRepository, WorkExportRepository {
+    implements
+        FilteredWorkRepository,
+        WorkExportRepository,
+        WorkReportRepository {
   const HttpWorkRepository(this.api);
   final ApiClient api;
   static const root = '/api/field-work';
@@ -93,6 +104,22 @@ class HttpWorkRepository
     mimeType: 'application/zip',
     cancelToken: cancelToken,
     queryParameters: {'revision': revision},
+  );
+
+  @override
+  Future<Uint8List> exportReport({
+    required WorkListFilters filters,
+    required bool romanian,
+    CancelToken? cancelToken,
+  }) => api.getFile(
+    '$root/reports.csv',
+    mimeType: 'text/csv',
+    cancelToken: cancelToken,
+    queryParameters: {
+      'all': true,
+      ...filters.toQueryParameters(),
+      'lang': romanian ? 'ro' : 'en',
+    },
   );
 
   @override
